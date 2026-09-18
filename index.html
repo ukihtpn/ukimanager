@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infection Control Manager — HTPN</title>
+<style>
+  :root{
+    --maroon:#7a0019; --maroon-dark:#57000f; --ink:#1c1a19; --paper:#faf8f6;
+    --card:#ffffff; --line:#e7e1db; --muted:#7a7069; --yellow:#f2b705;
+    --green:#2e7d32; --blue:#1565c0; --orange:#ef6c00; --red:#c62828; --grey:#757575;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);}
+  .hidden{display:none !important;}
+
+  /* LOGIN SCREEN */
+  .login-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--maroon),var(--maroon-dark));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .login-card{background:#fff;border-radius:14px;padding:28px 24px;width:380px;max-width:100%;text-align:center;}
+  .login-title{font-size:17px;font-weight:700;color:var(--maroon);margin-bottom:2px;}
+  .login-title small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:4px;}
+  .login-sub{font-size:12.5px;color:var(--muted);margin:14px 0 12px;}
+  .login-name-btn{display:flex;flex-direction:column;align-items:flex-start;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer;text-align:left;}
+  .login-name-btn:hover{border-color:var(--maroon);background:#fdf3f5;}
+  .login-name-btn .nm{font-weight:700;font-size:14px;color:var(--ink);}
+  .login-name-btn .rl{font-size:11.5px;color:var(--muted);}
+
+  /* LAYOUT */
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+  .topbar{display:none;}
+  .sidebar{background:var(--maroon);color:#fff;padding:22px 14px;display:flex;flex-direction:column;gap:2px;}
+  .brand{font-size:15px;font-weight:700;letter-spacing:.2px;margin-bottom:2px;}
+  .brand small{display:block;font-weight:400;font-size:11px;opacity:.75;margin-top:2px;}
+  .navsep{height:14px;}
+  .navbtn{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:6px;color:#f4e6ea;text-decoration:none;font-size:13.5px;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;}
+  .navbtn:hover{background:rgba(255,255,255,.08);}
+  .navbtn.active{background:#fff;color:var(--maroon);font-weight:600;}
+  .main{padding:24px 30px;max-width:1200px;}
+  .sidebar-overlay{display:none;}
+  .userbar{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.15);font-size:12px;color:#f0dde2;}
+  .userbar button{background:none;border:none;color:#fff;text-decoration:underline;font-size:11.5px;cursor:pointer;padding:0;margin-top:3px;}
+
+  h1{font-size:21px;margin:0 0 4px;}
+  h2{font-size:15px;margin:0 0 12px;}
+  .subtitle{color:var(--muted);font-size:13px;margin-bottom:20px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:20px;overflow-x:auto;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .btn{background:var(--maroon);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;}
+  .btn:hover{background:var(--maroon-dark);}
+  .btn.secondary{background:transparent;color:var(--maroon);border:1px solid var(--maroon);}
+  .btn.small{padding:4px 10px;font-size:12px;}
+  .view{display:none;} .view.active{display:block;}
+  .empty{color:var(--muted);font-size:13px;padding:14px 0;}
+
+  /* MODAL */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.active{display:flex;}
+  .modal{background:#fff;border-radius:10px;padding:22px;width:480px;max-width:92vw;max-height:88vh;overflow:auto;}
+  .modal h3{margin-top:0;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600;}
+  .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;font-family:inherit;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
+
+  /* REMINDER CARDS */
+  .reminder-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+  .reminder-card{border-radius:8px;padding:14px 16px;color:#fff;}
+  .reminder-card.today{background:var(--maroon);}
+  .reminder-card.week{background:#39424e;}
+  .reminder-card .rnum{font-size:24px;font-weight:700;}
+  .reminder-card .rlbl{font-size:12px;opacity:.9;}
+  .reminder-card .ritem{font-size:11.5px;opacity:.9;margin-top:4px;}
+
+  /* CALENDAR EMBED */
+  .cal-embed-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+  .cal-embed-wrap iframe{width:100%;height:560px;border:none;display:block;}
+  .cal-config-note{font-size:12px;color:var(--muted);margin-top:8px;}
+
+  /* THINGS TO DO */
+  .task-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .task-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;}
+  .task-row .txt{flex:1;font-size:14px;}
+  .task-row.done .txt{text-decoration:line-through;color:var(--muted);}
+  .task-row .meta{font-size:11px;color:var(--muted);}
+  .task-add{display:flex;gap:8px;margin-top:14px;}
+  .task-add input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .seg{display:flex;border:1px solid var(--maroon);border-radius:6px;overflow:hidden;}
+  .seg button{flex:1;background:#fff;color:var(--maroon);border:none;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+  .seg button.active{background:var(--maroon);color:#fff;}
+
+  /* OUTBREAK GRID */
+  .ob-title{text-align:center;font-weight:700;font-size:13.5px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.02em;}
+  .ob-grid{display:grid;grid-template-columns:70px repeat(12,1fr);gap:1px;background:var(--line);border:1px solid var(--line);font-size:10.5px;margin-bottom:18px;}
+  .ob-grid .hcell{background:#f1ece6;font-weight:700;padding:6px 3px;text-align:center;}
+  .ob-grid .wcell{background:#f1ece6;font-weight:600;padding:6px 4px;display:flex;align-items:center;}
+  .ob-grid .cell{background:#fff;min-height:38px;padding:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;}
+  .ob-grid .cell:hover{background:#fff7ec;}
+  .ob-grid .cell.filled.Outbreak{background:#f8443d;color:#fff;font-weight:700;}
+  .ob-grid .cell.filled.OMT{background:#ffd479;color:#7a4b00;font-weight:700;}
+  .link-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .link-row a{color:var(--maroon);font-weight:600;}
+
+  @media (max-width:900px){
+    .app{display:block;}
+    .topbar{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:30;background:var(--maroon);color:#fff;padding:13px 16px;}
+    .topbar .hamburger{background:none;border:none;color:#fff;font-size:20px;line-height:1;padding:2px 4px;cursor:pointer;}
+    .topbar .brand{font-size:14px;margin:0;}
+    .topbar .brand small{opacity:.8;font-size:10.5px;}
+    .sidebar{position:fixed;top:0;left:0;height:100%;width:250px;max-width:80vw;z-index:60;transform:translateX(-100%);transition:transform .22s ease;overflow-y:auto;box-shadow:2px 0 14px rgba(0,0,0,.25);}
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55;}
+    .sidebar-overlay.active{display:block;}
+    .navbtn{padding:13px 12px;font-size:14.5px;}
+    .main{padding:16px 14px 40px;max-width:100%;}
+    h1{font-size:18px;}
+    .reminder-row{grid-template-columns:1fr;}
+    .toolbar{flex-direction:column;align-items:stretch;}
+    .toolbar > div{display:flex;flex-direction:column;gap:8px;}
+    .modal-bg{align-items:flex-end;}
+    .modal{width:100%;max-width:100%;border-radius:14px 14px 0 0;max-height:92vh;padding:18px 16px 22px;}
+    .cal-embed-wrap iframe{height:420px;}
+    .ob-grid{grid-template-columns:50px repeat(12,minmax(34px,1fr));font-size:9px;}
+    .ob-grid .cell{min-height:30px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-title">Infection Control Manager<small>Unit Kawalan Infeksi, HTPN</small></div>
+    <div class="login-sub">Pilih nama anda untuk masuk</div>
+    <div id="loginList"></div>
+  </div>
+</div>
+
+<div class="app hidden" id="appRoot">
+  <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+    <div class="brand">Infection Control Manager<small>Unit Kawalan Infeksi, HTPN</small></div>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="brand">Infection Control Manager<small>Unit Kawalan Infeksi, HTPN</small></div>
+    <div class="navsep"></div>
+    <button class="navbtn active" data-view="dashboard">Dashboard</button>
+    <button class="navbtn" data-view="todo">Things To Do</button>
+    <button class="navbtn" data-view="outbreak">Monitor Outbreak</button>
+    <div class="userbar" id="userbar"></div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <h1>Dashboard</h1>
+      <div class="subtitle">Plan • Track • Remind • Improve</div>
+
+      <div class="reminder-row">
+        <div class="reminder-card today">
+          <div class="rnum" id="rNumToday">0</div>
+          <div class="rlbl">Due Today</div>
+          <div id="rListToday"></div>
+        </div>
+        <div class="reminder-card week">
+          <div class="rnum" id="rNumWeek">0</div>
+          <div class="rlbl">Due in Next 7 Days</div>
+          <div id="rListWeek"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar" style="margin-bottom:8px;">
+          <h2 style="margin:0;">Full Calendar</h2>
+          <button class="btn secondary small" onclick="openCalendarConfig()">Configure Calendar</button>
+        </div>
+        <div class="cal-embed-wrap" id="calEmbedWrap">
+          <div class="empty" style="padding:40px 20px;text-align:center;">Calendar belum diconfigure. Klik "Configure Calendar" di atas.</div>
+        </div>
+        <div class="cal-config-note">Calendar ini live dari Google Calendar sebenar — boleh tambah/edit event terus dalam Google Calendar, ia akan terus muncul di sini.</div>
+      </div>
+    </div>
+
+    <!-- THINGS TO DO -->
+    <div class="view" id="view-todo">
+      <div class="toolbar">
+        <h1 style="margin:0;">Things To Do</h1>
+        <div class="seg">
+          <button class="active" id="segToday" onclick="switchTaskView('today')">Today</button>
+          <button id="segHistory" onclick="switchTaskView('history')">History</button>
+        </div>
+      </div>
+      <div class="subtitle">Peribadi untuk <strong id="taskOwnerLabel"></strong> — hanya anda boleh nampak list ini.</div>
+      <div class="panel">
+        <div id="taskList"></div>
+        <div class="task-add" id="taskAddRow">
+          <input id="newTaskInput" placeholder="Tambah task hari ini..." onkeydown="if(event.key==='Enter')addTask()">
+          <button class="btn" onclick="addTask()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONITOR OUTBREAK -->
+    <div class="view" id="view-outbreak">
+      <div class="toolbar">
+        <h1 style="margin:0;">Monitor Outbreak</h1>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn secondary small" onclick="shiftObYear(-1)">‹</button>
+          <span id="obYearLabel1" style="font-weight:700;font-size:14px;"></span>
+          <button class="btn secondary small" onclick="shiftObYear(1)">›</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ob-title" id="obTitle1"></div>
+        <div class="toolbar" style="margin-bottom:6px;">
+          <div></div>
+          <button class="btn small" onclick="openOutbreakModal('Outbreak')">+ Add Outbreak Period</button>
+        </div>
+        <div class="ob-grid" id="obGridOutbreak"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ob-title" id="obTitle2"></div>
+        <div class="toolbar" style="margin-bottom:6px;">
+          <div></div>
+          <button class="btn small" onclick="openOutbreakModal('OMT')">+ Add OMT Date</button>
+        </div>
+        <div class="ob-grid" id="obGridOMT"></div>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar" style="margin-bottom:4px;">
+          <h2 style="margin:0;">Useful Links</h2>
+          <button class="btn secondary small" onclick="openLinkModal()">+ Add Link</button>
+        </div>
+        <div id="linksList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   Paste your deployed Google Apps Script Web App URL ONCE below.
+   ============================================================ */
+const HARDCODED_API_URL = ''; // <-- paste your Web App URL here
+
+let API_URL = localStorage.getItem('ipc_api_url') || HARDCODED_API_URL;
+let obYear = new Date().getFullYear();
+let taskViewMode = 'today';
+let cache = { tasks:[], outbreak:[], omt:[], links:[] };
+
+const MONTHS = ['JAN','FEB','MAC','APR','MAY','JUN','JULY','AUG','SEPT','OCT','NOV','DEC'];
+const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 5','WAD 6','WAD 7','WAD 8','ICU'];
+
+const STAFF_LIST = [
+  { name:'Dr Aneesa', role:'Infection Control Officer, UKI' },
+  { name:'Dr Saihah', role:'Medical Officer, UKI' },
+  { name:'Dr Zaila', role:'Ketua Unit, UKI' },
+  { name:'Maria', role:'Infection Control Nurse (ICN)' },
+  { name:'Mariam', role:'Infection Control Nurse (ICN)' },
+  { name:'Rosena', role:'Infection Control Nurse (ICN)' },
+  { name:'Dr Fazilah', role:'Pakar Mikrobiologi' }
+];
+
+function ensureApi(){ return !!API_URL; }
+async function apiGet(action, params){
+  if(!ensureApi()) return { success:false, data:[] };
+  const qs = new URLSearchParams(Object.assign({ action }, params||{})).toString();
+  try{ const res = await fetch(API_URL + '?' + qs); return await res.json(); }
+  catch(err){ console.error(err); return { success:false, data:[], message:err.message }; }
+}
+async function apiPost(action, data){
+  if(!ensureApi()) return { success:false };
+  try{
+    const res = await fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ action, data }) });
+    return await res.json();
+  }catch(err){ console.error(err); return { success:false, message:err.message }; }
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function currentUser(){ return localStorage.getItem('ipc_current_user') || ''; }
+function renderLogin(){
+  document.getElementById('loginList').innerHTML = STAFF_LIST.map(s=>
+    `<div class="login-name-btn" onclick="doLogin('${s.name}')"><div class="nm">${s.name}</div><div class="rl">${s.role}</div></div>`
+  ).join('');
+}
+function doLogin(name){
+  localStorage.setItem('ipc_current_user', name);
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  renderUserbar();
+  loadDashboard();
+}
+function logout(){ localStorage.removeItem('ipc_current_user'); location.reload(); }
+function renderUserbar(){
+  document.getElementById('userbar').innerHTML = `Logged in as <strong>${currentUser()}</strong><br><button onclick="logout()">Switch user</button>`;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+document.querySelectorAll('.navbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    refreshCurrentView(btn.dataset.view);
+    closeSidebar();
+    window.scrollTo(0,0);
+  });
+});
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); }
+function currentView(){ return document.querySelector('.navbtn.active').dataset.view; }
+function refreshCurrentView(view){
+  view = view || currentView();
+  if(view==='dashboard') loadDashboard();
+  else if(view==='todo') loadTasks();
+  else if(view==='outbreak') loadOutbreak();
+}
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
+function openModal(html){ document.getElementById('modalBody').innerHTML = html; document.getElementById('modalBg').classList.add('active'); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('active'); }
+document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
+function fmtDate(d){ if(!d) return ''; const dt = new Date(d); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtTime(t){ if(!t) return ''; const dt = new Date(t); if(isNaN(dt)) return t; return dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+
+/* ============================================================
+   DASHBOARD — reminders + full Google Calendar embed
+   ============================================================ */
+async function loadDashboard(){
+  renderCalendarEmbed();
+  if(!ensureApi()) return;
+  const res = await apiGet('getCalendarReminders', {});
+  const data = res.data || { today:[], week:[] };
+  document.getElementById('rNumToday').textContent = (data.today||[]).length;
+  document.getElementById('rListToday').innerHTML = (data.today||[]).slice(0,5).map(e=>
+    `<div class="ritem">• ${e.allDay?'':fmtTime(e.start)+' — '}${e.title}${e.location?' ('+e.location+')':''}</div>`
+  ).join('') || '<div class="ritem">Tiada aktiviti hari ini</div>';
+  document.getElementById('rNumWeek').textContent = (data.week||[]).length;
+  document.getElementById('rListWeek').innerHTML = (data.week||[]).slice(0,5).map(e=>
+    `<div class="ritem">• ${fmtDate(e.start)} — ${e.title}</div>`
+  ).join('') || '<div class="ritem">Tiada aktiviti minggu ini</div>';
+}
+function renderCalendarEmbed(){
+  const calId = localStorage.getItem('ipc_google_calendar_id');
+  const wrap = document.getElementById('calEmbedWrap');
+  if(!calId){
+    wrap.innerHTML = '<div class="empty" style="padding:40px 20px;text-align:center;">Calendar belum diconfigure. Klik "Configure Calendar" di atas.</div>';
+    return;
+  }
+  const src = encodeURIComponent(calId);
+  wrap.innerHTML = `<iframe src="https://calendar.google.com/calendar/embed?src=${src}&ctz=Asia%2FKuala_Lumpur&mode=MONTH&showTitle=0&showPrint=0&showCalendars=0" frameborder="0" scrolling="no"></iframe>`;
+}
+function openCalendarConfig(){
+  const current = localStorage.getItem('ipc_google_calendar_id') || '';
+  openModal(`
+    <h3>Configure Calendar</h3>
+    <div class="field"><label>Google Calendar ID / Email</label>
+      <input id="cal_id_input" value="${current}" placeholder="e.g. yourname@gmail.com or a calendar ID">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+      Dalam Google Calendar: Settings → pilih calendar → "Integrate calendar" → salin "Calendar ID". Pastikan calendar tu set share/public (at least "See all event details") supaya boleh embed.
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveCalendarConfig()">Save</button>
+    </div>
+  `);
+}
+function saveCalendarConfig(){
+  const v = document.getElementById('cal_id_input').value.trim();
+  if(!v) return;
+  localStorage.setItem('ipc_google_calendar_id', v);
+  closeModal();
+  renderCalendarEmbed();
+}
+
+/* ============================================================
+   THINGS TODAY (personal checklist)
+   ============================================================ */
+function switchTaskView(mode){
+  taskViewMode = mode;
+  document.getElementById('segToday').classList.toggle('active', mode==='today');
+  document.getElementById('segHistory').classList.toggle('active', mode==='history');
+  document.getElementById('taskAddRow').classList.toggle('hidden', mode==='history');
+  loadTasks();
+}
+async function loadTasks(){
+  document.getElementById('taskOwnerLabel').textContent = currentUser();
+  const res = await apiGet('getDailyTasks', { owner: currentUser(), view: taskViewMode==='today' ? 'pending' : 'history' });
+  cache.tasks = res.data || [];
+  if(taskViewMode==='today'){
+    document.getElementById('taskList').innerHTML = cache.tasks.length ? cache.tasks.map(t=>`
+      <div class="task-row"><input type="checkbox" onchange="toggleTask('${t.task_id}')"><div class="txt">${t.task_text}</div></div>
+    `).join('') : '<div class="empty">Tiada task. Tambah di bawah.</div>';
+  } else {
+    document.getElementById('taskList').innerHTML = cache.tasks.length ? cache.tasks.map(t=>`
+      <div class="task-row done"><input type="checkbox" checked disabled><div class="txt">${t.task_text}<div class="meta">Selesai: ${fmtDate(t.completed_at)}</div></div></div>
+    `).join('') : '<div class="empty">Belum ada task selesai.</div>';
+  }
+}
+async function addTask(){
+  const input = document.getElementById('newTaskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  await apiPost('createDailyTask', { owner: currentUser(), task_text: text });
+  input.value = '';
+  loadTasks();
+}
+async function toggleTask(taskId){
+  await apiPost('updateDailyTask', { task_id: taskId, status:'Done' });
+  loadTasks();
+}
+
+/* ============================================================
+   MONITOR OUTBREAK
+   ============================================================ */
+async function loadOutbreak(){
+  if(!ensureApi()) return;
+  document.getElementById('obYearLabel1').textContent = obYear;
+  document.getElementById('obTitle1').textContent = 'TIMELINE CRE OUTBREAK — HOSPITAL TENGKU PERMAISURI NORASHIKIN ' + obYear;
+  document.getElementById('obTitle2').textContent = 'TIMELINE OUTBREAK MANAGEMENT MEETING (OMT) — HOSPITAL TENGKU PERMAISURI NORASHIKIN ' + obYear;
+  const [obRes, omtRes, linkRes] = await Promise.all([
+    apiGet('getOutbreakRecords', { record_type:'Outbreak', year: obYear }),
+    apiGet('getOutbreakRecords', { record_type:'OMT', year: obYear }),
+    apiGet('getOutbreakLinks', {})
+  ]);
+  cache.outbreak = obRes.data || []; cache.omt = omtRes.data || []; cache.links = linkRes.data || [];
+  renderObGrid('obGridOutbreak', cache.outbreak, 'Outbreak');
+  renderObGrid('obGridOMT', cache.omt, 'OMT');
+  document.getElementById('linksList').innerHTML = cache.links.length ? cache.links.map(l=>`
+    <div class="link-row"><a href="${l.url}" target="_blank">${l.title}</a><button class="btn small secondary" onclick="deleteLink('${l.link_id}')">Remove</button></div>
+  `).join('') : '<div class="empty">Belum ada link. Tambah CRE Tracker System / Carta Alir Kerja di sini.</div>';
+}
+function shiftObYear(delta){ obYear += delta; loadOutbreak(); }
+function renderObGrid(elId, records, type){
+  let html = '<div class="hcell"></div>' + MONTHS.map(m=>`<div class="hcell">${m}</div>`).join('');
+  WARDS.forEach(ward=>{
+    html += `<div class="wcell">${ward}</div>`;
+    for(let m=0; m<12; m++){
+      const rec = records.find(r=>{
+        if(r.ward !== ward) return false;
+        const s = new Date(r.start_date), e = new Date(r.end_date || r.start_date);
+        const monthStart = new Date(obYear, m, 1), monthEnd = new Date(obYear, m+1, 0);
+        return s <= monthEnd && e >= monthStart;
+      });
+      if(rec){
+        const sd = new Date(rec.start_date), ed = new Date(rec.end_date || rec.start_date);
+        const label = sd.getTime()!==ed.getTime()
+          ? `${sd.getDate()}/${sd.getMonth()+1}/${String(obYear).slice(2)}-${ed.getDate()}/${ed.getMonth()+1}/${String(obYear).slice(2)}`
+          : `${sd.getDate()}/${sd.getMonth()+1}`;
+        html += `<div class="cell filled ${type}" onclick='openOutbreakModal("${type}", ${JSON.stringify(rec).replace(/'/g,"&apos;")})'>${label}</div>`;
+      } else {
+        html += `<div class="cell" onclick="openOutbreakModal('${type}', null, '${ward}', ${m})"></div>`;
+      }
+    }
+  });
+  document.getElementById(elId).innerHTML = html;
+}
+function openOutbreakModal(type, existing, presetWard, presetMonth){
+  const r = existing || {};
+  const defaultDate = (presetWard!==undefined && presetMonth!==undefined) ? new Date(obYear, presetMonth, 1).toISOString().slice(0,10) : '';
+  openModal(`
+    <h3>${type==='OMT' ? 'Outbreak Management Meeting' : 'Outbreak Period'}</h3>
+    <div class="field"><label>Ward</label><select id="ob_ward">
+      ${WARDS.map(w=>`<option ${ (r.ward||presetWard)===w ? 'selected':''}>${w}</option>`).join('')}
+    </select></div>
+    <div class="field"><label>Organism / Notes label</label><input id="ob_organism" value="${r.organism||''}" placeholder="e.g. CRE"></div>
+    <div class="formgrid">
+      <div class="field"><label>Start Date</label><input type="date" id="ob_start" value="${r.start_date? new Date(r.start_date).toISOString().slice(0,10) : defaultDate}"></div>
+      <div class="field"><label>End Date ${type==='OMT'?'(optional)':''}</label><input type="date" id="ob_end" value="${r.end_date? new Date(r.end_date).toISOString().slice(0,10) : ''}"></div>
+    </div>
+    <div class="field"><label>Additional Notes</label><textarea id="ob_notes">${r.notes||''}</textarea></div>
+    <div class="modal-actions">
+      ${existing ? `<button class="btn secondary" onclick="deleteOutbreakRecord('${r.record_id}')">Delete</button>` : ''}
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveOutbreakRecord('${type}','${r.record_id||''}')">Save</button>
+    </div>
+  `);
+}
+async function saveOutbreakRecord(type, id){
+  const data = {
+    record_type: type,
+    ward: document.getElementById('ob_ward').value,
+    organism: document.getElementById('ob_organism').value,
+    start_date: document.getElementById('ob_start').value,
+    end_date: document.getElementById('ob_end').value || document.getElementById('ob_start').value,
+    notes: document.getElementById('ob_notes').value
+  };
+  if(id){ data.record_id = id; await apiPost('updateOutbreakRecord', data); }
+  else { await apiPost('createOutbreakRecord', data); }
+  closeModal(); loadOutbreak();
+}
+async function deleteOutbreakRecord(id){
+  await apiPost('deleteOutbreakRecord', { record_id:id });
+  closeModal(); loadOutbreak();
+}
+function openLinkModal(){
+  openModal(`
+    <h3>Add Link</h3>
+    <div class="field"><label>Title</label><input id="lk_title" placeholder="e.g. CRE Tracker System 2026"></div>
+    <div class="field"><label>URL</label><input id="lk_url" placeholder="https://..."></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveLink()">Save</button></div>
+  `);
+}
+async function saveLink(){
+  await apiPost('createOutbreakLink', { title: document.getElementById('lk_title').value, url: document.getElementById('lk_url').value });
+  closeModal(); loadOutbreak();
+}
+async function deleteLink(id){
+  await apiPost('deleteOutbreakLink', { link_id:id });
+  loadOutbreak();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderLogin();
+if(currentUser()){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  renderUserbar();
+  loadDashboard();
+}
+</script>
+</body>
+</html>
