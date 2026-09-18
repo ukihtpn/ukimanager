@@ -52,6 +52,12 @@
   .btn.small{padding:4px 10px;font-size:12px;}
   .view{display:none;} .view.active{display:block;}
   .empty{color:var(--muted);font-size:13px;padding:14px 0;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);}
+  tr:hover td{background:#fbf7f2;}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;}
+  .badge.Present{background:var(--green);} .badge.Absent{background:var(--red);} .badge.Excused{background:var(--grey);}
 
   /* MODAL */
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:50;}
@@ -148,6 +154,7 @@
     <div class="navsep"></div>
     <button class="navbtn active" data-view="dashboard">Dashboard</button>
     <button class="navbtn" data-view="todo">Things To Do</button>
+    <button class="navbtn" data-view="attendance">Attendance</button>
     <button class="navbtn" data-view="outbreak">Monitor Outbreak</button>
     <div class="userbar" id="userbar"></div>
   </div>
@@ -200,6 +207,29 @@
           <input id="newTaskInput" placeholder="Tambah task hari ini..." onkeydown="if(event.key==='Enter')addTask()">
           <button class="btn" onclick="addTask()">Add</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div class="view" id="view-attendance">
+      <h1>Attendance</h1>
+      <div class="subtitle">Rekod kehadiran untuk mesyuarat, training atau program UKI.</div>
+      <div class="panel">
+        <div class="toolbar">
+          <div class="field" style="flex:1;margin-bottom:0;"><label>Pilih Program / Aktiviti</label>
+            <select id="attActivitySelect" onchange="loadAttendanceForActivity()"></select>
+          </div>
+          <button class="btn secondary small" onclick="openNewActivityModal()">+ Program Baru</button>
+        </div>
+        <div class="toolbar" style="margin-top:14px;">
+          <div id="attSummary" style="font-size:13px;color:var(--muted);"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="confirmMyAttendance()">✓ Confirm Your Attendance</button>
+            <button class="btn secondary small" onclick="openAddAttendanceModal()">+ Tambah Staff Hadir</button>
+          </div>
+        </div>
+        <table><thead><tr><th>Nama</th><th>Jawatan</th><th>Wad/Unit</th><th>Status</th><th>Masa Check-in</th></tr></thead>
+        <tbody id="attendanceList"></tbody></table>
       </div>
     </div>
 
@@ -258,7 +288,7 @@ const HARDCODED_API_URL = ''; // <-- paste your Web App URL here
 let API_URL = localStorage.getItem('ipc_api_url') || HARDCODED_API_URL;
 let obYear = new Date().getFullYear();
 let taskViewMode = 'today';
-let cache = { tasks:[], outbreak:[], omt:[], links:[] };
+let cache = { tasks:[], outbreak:[], omt:[], links:[], activities:[], attendance:[] };
 
 const MONTHS = ['JAN','FEB','MAC','APR','MAY','JUN','JULY','AUG','SEPT','OCT','NOV','DEC'];
 const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 5','WAD 6','WAD 7','WAD 8','ICU'];
@@ -330,6 +360,7 @@ function refreshCurrentView(view){
   view = view || currentView();
   if(view==='dashboard') loadDashboard();
   else if(view==='todo') loadTasks();
+  else if(view==='attendance') loadAttendanceView();
   else if(view==='outbreak') loadOutbreak();
 }
 
@@ -352,12 +383,26 @@ async function loadDashboard(){
   const data = res.data || { today:[], week:[] };
   document.getElementById('rNumToday').textContent = (data.today||[]).length;
   document.getElementById('rListToday').innerHTML = (data.today||[]).slice(0,5).map(e=>
-    `<div class="ritem">• ${e.allDay?'':fmtTime(e.start)+' — '}${e.title}${e.location?' ('+e.location+')':''}</div>`
+    `<div class="ritem" style="cursor:pointer;text-decoration:underline;" onclick='goToAttendanceFromEvent(${JSON.stringify(e).replace(/'/g,"&apos;")})'>• ${e.allDay?'':fmtTime(e.start)+' — '}${e.title}${e.location?' ('+e.location+')':''} ›</div>`
   ).join('') || '<div class="ritem">Tiada aktiviti hari ini</div>';
   document.getElementById('rNumWeek').textContent = (data.week||[]).length;
   document.getElementById('rListWeek').innerHTML = (data.week||[]).slice(0,5).map(e=>
     `<div class="ritem">• ${fmtDate(e.start)} — ${e.title}</div>`
   ).join('') || '<div class="ritem">Tiada aktiviti minggu ini</div>';
+}
+async function goToAttendanceFromEvent(ev){
+  const res = await apiPost('findOrCreateActivity', {
+    activity_name: ev.title,
+    date: ev.start,
+    location: ev.location || ''
+  });
+  const activity = res.data;
+  document.querySelector('.navbtn[data-view="attendance"]').click();
+  setTimeout(async ()=>{
+    await loadAttendanceView();
+    document.getElementById('attActivitySelect').value = activity.activity_id;
+    loadAttendanceForActivity();
+  }, 250);
 }
 function renderCalendarEmbed(){
   const calId = localStorage.getItem('ipc_google_calendar_id');
@@ -428,6 +473,96 @@ async function addTask(){
 async function toggleTask(taskId){
   await apiPost('updateDailyTask', { task_id: taskId, status:'Done' });
   loadTasks();
+}
+
+/* ============================================================
+   ATTENDANCE
+   ============================================================ */
+async function loadAttendanceView(){
+  if(!ensureApi()) return;
+  const res = await apiGet('getActivities', {});
+  cache.activities = res.data || [];
+  const sel = document.getElementById('attActivitySelect');
+  sel.innerHTML = cache.activities.length
+    ? cache.activities.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(a=>`<option value="${a.activity_id}">${fmtDate(a.date)} — ${a.activity_name}</option>`).join('')
+    : '';
+  if(cache.activities.length) loadAttendanceForActivity();
+  else { document.getElementById('attSummary').textContent = ''; document.getElementById('attendanceList').innerHTML = '<tr><td colspan="5" class="empty">Belum ada program. Klik "+ Program Baru" dulu.</td></tr>'; }
+}
+async function loadAttendanceForActivity(){
+  const id = document.getElementById('attActivitySelect').value;
+  if(!id) return;
+  const res = await apiGet('getAttendance', { activity_id:id });
+  cache.attendance = res.data || [];
+  document.getElementById('attSummary').textContent = cache.attendance.length + ' staff direkod';
+  document.getElementById('attendanceList').innerHTML = cache.attendance.length ? cache.attendance.map(a=>`
+    <tr><td>${a.name}</td><td>${a.designation||''}</td><td>${a.ward||''}</td><td>${badge(a.attendance_status)}</td><td>${fmtTime(a.check_in_time)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">Belum ada attendance direkod.</td></tr>';
+}
+function badge(status){ return '<span class="badge '+String(status||'').replace(/\s/g,'')+'">'+ (status||'—') +'</span>'; }
+async function confirmMyAttendance(){
+  const activity_id = document.getElementById('attActivitySelect').value;
+  if(!activity_id){ alert('Pilih program dahulu.'); return; }
+  const already = cache.attendance.find(a=>a.name===currentUser());
+  if(already){ alert('Attendance anda dah direkod untuk program ini.'); return; }
+  await apiPost('addAttendance', {
+    activity_id,
+    staff_id: 'SELF-' + currentUser().replace(/\s+/g,'_'),
+    name: currentUser(),
+    designation: '',
+    ward: '',
+    attendance_status: 'Present'
+  });
+  loadAttendanceForActivity();
+}
+function openNewActivityModal(){
+  openModal(`
+    <h3>Program / Aktiviti Baru</h3>
+    <div class="field"><label>Nama Program</label><input id="na_name" placeholder="e.g. Program Review CME UKI"></div>
+    <div class="formgrid">
+      <div class="field"><label>Tarikh</label><input type="date" id="na_date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Tempat/Wad</label><input id="na_location" placeholder="e.g. Bilik Mesyuarat UKI"></div>
+    </div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveNewActivity()">Save</button></div>
+  `);
+}
+async function saveNewActivity(){
+  const name = document.getElementById('na_name').value.trim();
+  if(!name) return;
+  await apiPost('createActivity', {
+    activity_name: name,
+    activity_type: 'Meeting',
+    date: document.getElementById('na_date').value,
+    location: document.getElementById('na_location').value,
+    status: 'Completed'
+  });
+  closeModal(); loadAttendanceView();
+}
+function openAddAttendanceModal(){
+  openModal(`
+    <h3>Tambah Staff Hadir</h3>
+    <div class="field"><label>Nama</label><input id="a_name"></div>
+    <div class="formgrid">
+      <div class="field"><label>Jawatan</label><input id="a_designation" placeholder="e.g. Staff Nurse"></div>
+      <div class="field"><label>Wad/Unit</label><input id="a_ward"></div>
+    </div>
+    <div class="field"><label>Status</label><select id="a_status"><option>Present</option><option>Absent</option><option>Excused</option></select></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveAttendance()">Save</button></div>
+  `);
+}
+async function saveAttendance(){
+  const activity_id = document.getElementById('attActivitySelect').value;
+  const name = document.getElementById('a_name').value.trim();
+  if(!activity_id || !name) return;
+  await apiPost('addAttendance', {
+    activity_id,
+    staff_id: 'MANUAL-' + Date.now(),
+    name,
+    designation: document.getElementById('a_designation').value,
+    ward: document.getElementById('a_ward').value,
+    attendance_status: document.getElementById('a_status').value
+  });
+  closeModal(); loadAttendanceForActivity();
 }
 
 /* ============================================================
