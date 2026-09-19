@@ -187,7 +187,7 @@
         <div class="cal-embed-wrap" id="calEmbedWrap">
           <div class="empty" style="padding:40px 20px;text-align:center;">Calendar belum diconfigure. Klik "Configure Calendar" di atas.</div>
         </div>
-        <div class="cal-config-note">Calendar ini live dari Google Calendar sebenar — boleh tambah/edit event terus dalam Google Calendar, ia akan terus muncul di sini.</div>
+        <div class="cal-config-note">Calendar default: ukihtpn@moh.gov.my — sudah preset, tak perlu masukkan setiap kali. Boleh tambah/edit event terus dalam Google Calendar, ia akan terus muncul di sini.</div>
       </div>
     </div>
 
@@ -213,13 +213,16 @@
     <!-- ATTENDANCE -->
     <div class="view" id="view-attendance">
       <h1>Attendance</h1>
-      <div class="subtitle">Rekod kehadiran untuk mesyuarat, training atau program UKI.</div>
+      <div class="subtitle">Rekod kehadiran untuk mesyuarat, training atau program UKI. Klik "Sync dari Calendar" untuk ambil program terus dari Google Calendar, atau "+ Program Baru" untuk tambah manual — lepas itu cuma tekan tanda kehadiran.</div>
       <div class="panel">
         <div class="toolbar">
           <div class="field" style="flex:1;margin-bottom:0;"><label>Pilih Program / Aktiviti</label>
             <select id="attActivitySelect" onchange="loadAttendanceForActivity()"></select>
           </div>
-          <button class="btn secondary small" onclick="openNewActivityModal()">+ Program Baru</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn secondary small" onclick="syncActivitiesFromCalendar(this)">↻ Sync dari Calendar</button>
+            <button class="btn secondary small" onclick="openNewActivityModal()">+ Program Baru</button>
+          </div>
         </div>
         <div class="toolbar" style="margin-top:14px;">
           <div id="attSummary" style="font-size:13px;color:var(--muted);"></div>
@@ -283,9 +286,11 @@
    CONFIG
    Paste your deployed Google Apps Script Web App URL ONCE below.
    ============================================================ */
-const HARDCODED_API_URL = ''; // <-- paste your Web App URL here
+const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycbwrNjwjOzjhrZkeRq_Bl5Gy7cdX4uTPVTm81pocOMRG9aA-gjDXUJFgwMuq_0XSEixE/exec';
+const DEFAULT_CALENDAR_ID = 'ukihtpn@moh.gov.my'; // pre-set so no one has to type this in
 
 let API_URL = localStorage.getItem('ipc_api_url') || HARDCODED_API_URL;
+if(!localStorage.getItem('ipc_google_calendar_id')) localStorage.setItem('ipc_google_calendar_id', DEFAULT_CALENDAR_ID);
 let obYear = new Date().getFullYear();
 let taskViewMode = 'today';
 let cache = { tasks:[], outbreak:[], omt:[], links:[], activities:[], attendance:[] };
@@ -415,7 +420,7 @@ function renderCalendarEmbed(){
   wrap.innerHTML = `<iframe src="https://calendar.google.com/calendar/embed?src=${src}&ctz=Asia%2FKuala_Lumpur&mode=MONTH&showTitle=0&showPrint=0&showCalendars=0" frameborder="0" scrolling="no"></iframe>`;
 }
 function openCalendarConfig(){
-  const current = localStorage.getItem('ipc_google_calendar_id') || '';
+  const current = localStorage.getItem('ipc_google_calendar_id') || DEFAULT_CALENDAR_ID;
   openModal(`
     <h3>Configure Calendar</h3>
     <div class="field"><label>Google Calendar ID / Email</label>
@@ -514,6 +519,22 @@ async function confirmMyAttendance(){
     attendance_status: 'Present'
   });
   loadAttendanceForActivity();
+}
+async function syncActivitiesFromCalendar(btn){
+  const oldLabel = btn.textContent;
+  btn.textContent = 'Syncing...'; btn.disabled = true;
+  const res = await apiGet('getCalendarEventsRange', {});
+  const events = res.data || [];
+  const existing = cache.activities || [];
+  const sameDay = (a,b) => new Date(a).toDateString() === new Date(b).toDateString();
+  const newOnes = events.filter(ev => !existing.some(a => a.activity_name===ev.title && sameDay(a.date, ev.start)));
+  for(const ev of newOnes){
+    await apiPost('findOrCreateActivity', { activity_name: ev.title, date: ev.start, location: ev.location || '' });
+  }
+  btn.textContent = oldLabel; btn.disabled = false;
+  await loadAttendanceView();
+  if(newOnes.length) alert(newOnes.length + ' program baru ditambah dari Google Calendar.');
+  else alert('Tiada program baru — semua event dari calendar dah ada dalam senarai.');
 }
 function openNewActivityModal(){
   openModal(`
