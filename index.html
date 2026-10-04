@@ -1198,14 +1198,14 @@ const CAL = { y: new Date().getFullYear(), m: new Date().getMonth(), sel: new Da
 
 function calEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function calSameDay(a, b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
-function calColor(ev){ return CAL_COLORS[String(ev.color||'')] || '#7a0019'; }
+function calColor(ev){ const c = String(ev.color||''); return /^#[0-9a-f]{3,8}$/i.test(c) ? c : (CAL_COLORS[c] || '#7a0019'); }
 function calTime(d){ return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); }
 function calEventsOn(day){
   const s = new Date(day.getFullYear(), day.getMonth(), day.getDate()), e = new Date(s); e.setDate(e.getDate()+1);
   return (CAL.cache[CAL.y + '-' + CAL.m] || []).filter(ev=>{
     const a = new Date(ev.start), b = new Date(ev.end || ev.start);
     return a < e && (b > s || (+a === +b && a >= s));
-  }).sort((x,y)=>(x.allDay?0:1)-(y.allDay?0:1) || new Date(x.start)-new Date(y.start));
+  }).sort((x,y)=>(x.allDay?0:1)-(y.allDay?0:1) || Math.max(new Date(x.start), s) - Math.max(new Date(y.start), s));
 }
 async function calLoadMonth(force){
   const key = CAL.y + '-' + CAL.m;
@@ -1239,9 +1239,17 @@ async function calSync(){
   if(r.success) swrPut(swrKey('getCalendarReminders', {}), r);
   loadDashboard();
 }
-function calEventCard(ev){
+function calEventCard(ev, day){
   const i = CAL.list.push(ev) - 1;
-  const when = ev.allDay ? `<span>Sepanjang</span><span>hari</span>` : `<span>${calTime(ev.start)}</span><span>${ev.end ? calTime(ev.end) : ''}</span>`;
+  // events spanning several days (e.g. PPS HCAI 5–9 Okt) show the part for this day
+  const ds = day ? new Date(day.getFullYear(), day.getMonth(), day.getDate()) : null, de = ds ? new Date(ds.getTime() + 86400000) : null;
+  const a = new Date(ev.start), z = new Date(ev.end || ev.start);
+  const before = ds && a < ds, after = de && z > de;
+  let when;
+  if(ev.allDay || (before && after)) when = `<span>Sepanjang</span><span>hari</span>`;
+  else if(before) when = `<span>Hingga</span><span>${calTime(z)}</span>`;
+  else if(after) when = `<span>${calTime(a)}</span><span>→ ${z.getDate()} ${CAL_MONTHS[z.getMonth()]}</span>`;
+  else when = `<span>${calTime(a)}</span><span>${ev.end ? calTime(z) : ''}</span>`;
   return `<button class="cal-ev" onclick="calOpenEvent(${i})">
     <span class="cal-ev-time">${when}</span>
     <span class="cal-ev-dot" style="background:${calColor(ev)}"></span>
@@ -1255,7 +1263,7 @@ function calOpenEvent(i){
   const when = ev.allDay ? 'Sepanjang hari' : calTime(ev.start) + (ev.end ? ' – ' + calTime(ev.end) : '');
   openModal(`<h3>${calEsc(ev.title || '(Tiada tajuk)')}</h3>
     <div class="cal-detail"><div><span>Tarikh</span>${calEsc(CAL_DAYS_LONG[new Date(ev.start).getDay()])}, ${new Date(ev.start).getDate()} ${CAL_MONTHS_LONG[new Date(ev.start).getMonth()]} ${new Date(ev.start).getFullYear()}</div>
-      <div><span>Masa</span>${calEsc(when)}</div>${ev.location ? `<div><span>Tempat</span>${calEsc(ev.location)}</div>` : ''}</div>
+      <div><span>Masa</span>${calEsc(when)}</div>${ev.location ? `<div><span>Tempat</span>${calEsc(ev.location)}</div>` : ''}${ev.calendar ? `<div><span>Kalendar</span>${calEsc(ev.calendar)}</div>` : ''}</div>
     <div class="mn-help" style="margin:12px 0 0;">Acara ini tidak perlukan kehadiran. Perlu juga? <button class="at-link" style="font-size:12px;padding:0;" onclick="closeModal();goToAttendanceFromEvent(CAL.list[${i}])">Buka senarai kehadiran</button></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal()">Tutup</button></div>`);
 }
@@ -1309,7 +1317,7 @@ async function renderAppCalendar(load){
           <div><strong>${isToday ? 'Hari ini' : CAL_DAYS_LONG[CAL.sel.getDay()]}</strong> · ${CAL_DAYS_LONG[CAL.sel.getDay()].slice(0,3)}, ${CAL.sel.getDate()} ${CAL_MONTHS[CAL.sel.getMonth()]} ${CAL.sel.getFullYear()}</div>
           <button class="cal-sync" onclick="calSync()">${CAL_ICONS.sync}Sync</button>
         </div>
-        ${CAL.loading ? '<div class="cal-empty">Memuatkan acara…</div>' : (dayEvs.length ? dayEvs.map(calEventCard).join('') : '<div class="cal-empty">Tiada acara pada hari ini.</div>')}
+        ${CAL.loading ? '<div class="cal-empty">Memuatkan acara…</div>' : (dayEvs.length ? dayEvs.map(ev=>calEventCard(ev, CAL.sel)).join('') : '<div class="cal-empty">Tiada acara pada hari ini.</div>')}
       </div>`;
   } else {
     const days = new Date(CAL.y, CAL.m + 1, 0).getDate();
@@ -1317,7 +1325,7 @@ async function renderAppCalendar(load){
     for(let d=1; d<=days; d++){
       const date = new Date(CAL.y, CAL.m, d), evs = calEventsOn(date);
       if(!evs.length) continue;
-      list += `<div class="cal-list-day ${calSameDay(date, today) ? 'today' : ''}">${CAL_DAYS_LONG[date.getDay()]}, ${d} ${CAL_MONTHS[CAL.m]}</div>` + evs.map(calEventCard).join('');
+      list += `<div class="cal-list-day ${calSameDay(date, today) ? 'today' : ''}">${CAL_DAYS_LONG[date.getDay()]}, ${d} ${CAL_MONTHS[CAL.m]}</div>` + evs.map(ev=>calEventCard(ev, date)).join('');
     }
     body = `<div class="cal-card">${monthBar}
       <div class="cal-dayp" style="padding-top:0;">
