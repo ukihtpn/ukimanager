@@ -3451,7 +3451,7 @@ function mnRenderDeck(){
   (MN.data.items||[]).forEach((it, i)=>(it.slides||[]).forEach(n=>{ (used[n] = used[n] || []).push(i+1); }));
   const nUsed = Object.keys(used).length;
   box.innerHTML = `
-    <div class="mn-deck-files">${deck.files.map((f, fi)=>`<span class="mn-chip">📎 ${mnEsc(f)}${MN_DECK_DOCS[fi] ? '' : ' <em title="Fail asal tiada dalam peranti ini — upload semula jika mahu masukkan gambar slaid">(teks sahaja)</em>'}</span>`).join('')}</div>
+    <div class="mn-deck-files">${deck.files.map((f, fi)=>`<span class="mn-chip">📎 ${mnEsc(f)}${MN_DECK_DOCS[fi] || (deck.file_ids && deck.file_ids[fi]) || (deck.img_ids && deck.img_ids[fi]) ? ' <em>✓ disimpan</em>' : ` <button class="at-link" style="font-size:12px;padding:0;" onclick="mnAskDeckFile(${fi})">(pilih semula fail untuk ambil gambar)</button>`}</span>`).join('')}</div>
     <div class="mn-help" style="margin:8px 0 6px;">${nUsed} daripada ${deck.pages.length} slaid sudah ditanda dalam sesi.</div>
     <div class="mn-thumbs">${deck.pages.map(p=>`<div class="mn-thumb ${used[p.num] ? 'picked' : ''}">
         ${p.thumb ? `<img src="${p.thumb}" alt="Slaid ${p.num}" onclick="mnZoomDeck(${p.num})">` : `<div class="mn-thumb-ph" onclick="mnZoomDeck(${p.num})">${p.num}</div>`}
@@ -3476,6 +3476,7 @@ async function mnDeckUpload(input){
       const pdfjs = await mnEnsurePdfJs();
       const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
       MN_DECK_DOCS[fi] = { kind: 'pdf', doc };
+      mnKeepDeckFile(fi, f);   // copy to Drive so pictures can be taken later on any device
       for(let n=1;n<=doc.numPages;n++){
         say(`Membaca ${f.name}: slaid ${n}/${doc.numPages}…`);
         const pg = await doc.getPage(n);
@@ -3493,6 +3494,7 @@ async function mnDeckUpload(input){
         const full = await mnScaleImage(url, 1600, 0.85), thumb = await mnScaleImage(url, 220, 0.6);
         if(!full) continue;
         store.full[k+1] = full;
+        mnKeepDeckImage(fi, k+1, full);
         deck.pages.push({ num: deck.pages.length + 1, file: fi, page: k+1, text: '', thumb: thumb.dataUrl });
       }
     }
@@ -3568,8 +3570,85 @@ function mnDeckRemove(){
   MN.data.items.forEach(it=>{ it.slides = []; });
   mnDirty(); mnRenderDeck(); mnRenderSessions();
 }
-async function mnSlideImage(num, width){
+/* The original slide file is kept in Google Drive (deck.file_ids) so that a
+   minute reopened later — or on another device — can still cut pictures
+   out of its slides. Minutes made before this have no copy: the user is
+   asked once to pick the same file again. */
+async function mnKeepDeckFile(fi, file){
+  if(file.size > 30*1024*1024){ showToast('Fail slaid besar (>30MB) — tidak disalin ke Drive. Simpan fail ini untuk ambil gambar kemudian.', 'info'); return; }
+  try{
+    const b64 = await mnBlobToBase64(file);
+    const up = await apiPost('uploadMinitFigure', { base64: b64, filename: 'slaid_' + Date.now() + '_' + file.name.replace(/[^A-Za-z0-9._-]+/g,'_'), mimeType: 'application/pdf' });
+    if(up.success && mnDeck()){ const d = mnDeck(); d.file_ids = d.file_ids || {}; d.file_ids[fi] = up.data.id; mnDirty(); }
+  }catch(e){ console.warn('deck copy failed', e); }
+}
+async function mnKeepDeckImage(fi, page, full){
+  try{
+    const up = await apiPost('uploadMinitFigure', { base64: full.dataUrl.split(',')[1], filename: 'slaid_' + Date.now() + '_' + page + '.jpg' });
+    if(up.success && mnDeck()){ const d = mnDeck(); d.img_ids = d.img_ids || {}; (d.img_ids[fi] = d.img_ids[fi] || {})[page] = up.data.id; mnDirty(); }
+  }catch(e){ console.warn('slide image copy failed', e); }
+}
+// make sure the slide file for deck page p is loaded; fetch it from Drive, or ask (ask=true)
+async function mnEnsureDeckFile(fi, ask){
+  if(MN_DECK_DOCS[fi]) return true;
+  const d = mnDeck(); if(!d) return false;
+  const id = d.file_ids && d.file_ids[fi];
+  if(id){
+    if(!mnEnsureDeckFile._loading) mnEnsureDeckFile._loading = {};
+    if(!mnEnsureDeckFile._loading[fi]){
+      mnEnsureDeckFile._loading[fi] = (async ()=>{
+        showToast('Memuat turun fail slaid dari Drive…', 'info');
+        const r = await apiGet('getMinitFigure', { id });
+        if(!r.success) throw new Error(r.message || 'fail slaid tidak dapat diambil');
+        const pdfjs = await mnEnsurePdfJs();
+        const doc = await pdfjs.getDocument({ data: mnB64ToBytes(r.data.base64) }).promise;
+        MN_DECK_DOCS[fi] = { kind: 'pdf', doc };
+        return true;
+      })().finally(()=>{ delete mnEnsureDeckFile._loading[fi]; });
+    }
+    try{ return await mnEnsureDeckFile._loading[fi]; }catch(e){ console.warn(e); }
+  }
+  const imgIds = d.img_ids && d.img_ids[fi];
+  if(imgIds){
+    const store = { kind: 'img', full: {} };
+    for(const pg of Object.keys(imgIds)){
+      const r = await apiGet('getMinitFigure', { id: imgIds[pg] });
+      if(r.success){ const url = 'data:image/jpeg;base64,' + r.data.base64; const im = await mnScaleImage(url, 1600, 0.9); if(im) store.full[pg] = im; }
+    }
+    MN_DECK_DOCS[fi] = store; return true;
+  }
+  if(!ask) return false;
+  return await mnAskDeckFile(fi);
+}
+// old minutes: pick the same slide file again (ticks and notes stay as they are)
+function mnAskDeckFile(fi){
+  const d = mnDeck(), name = d.files[fi] || 'fail slaid';
+  const pages = d.pages.filter(p=>p.file === fi).length;
+  return new Promise(resolve=>{
+    openModal(`<h3>Pilih semula fail slaid</h3>
+      <div class="mn-help" style="margin:0 0 10px;">Untuk ambil gambar dari slaid, app perlukan fail asal <strong>${mnEsc(name)}</strong> (${pages} slaid). Minit ini dibuat sebelum fail slaid disimpan ke Drive — pilih fail yang sama <strong>sekali sahaja</strong>. Tanda slaid dan nota tidak berubah.</div>
+      <label class="btn mn-filebtn">📂 Pilih fail ${mnEsc(name)}<input type="file" accept="application/pdf,.pdf" id="reDeckIn"></label>
+      <div class="mn-progress" id="reDeckProg"></div>
+      <div class="modal-actions"><button class="btn secondary" id="reDeckCancel">Batal</button></div>`);
+    document.getElementById('reDeckCancel').onclick = ()=>{ closeModal(); resolve(false); };
+    document.getElementById('reDeckIn').onchange = async e=>{
+      const f = e.target.files && e.target.files[0]; if(!f) return;
+      const prog = document.getElementById('reDeckProg'); prog.textContent = 'Membaca fail…';
+      try{
+        const pdfjs = await mnEnsurePdfJs();
+        const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
+        if(doc.numPages !== pages && !confirm('Fail ini ada ' + doc.numPages + ' slaid, tetapi fail asal ada ' + pages + ' slaid. Guna juga?')){ prog.textContent = ''; return; }
+        MN_DECK_DOCS[fi] = { kind: 'pdf', doc };
+        mnKeepDeckFile(fi, f);
+        closeModal(); showToast('✓ Fail slaid dipadankan — gambar boleh diambil sekarang'); mnRenderDeck();
+        resolve(true);
+      }catch(err){ prog.textContent = ''; alert('Gagal membaca PDF: ' + err.message); }
+    };
+  });
+}
+async function mnSlideImage(num, width, ask){
   const p = mnDeck().pages.find(x=>x.num === num); if(!p) return null;
+  if(!MN_DECK_DOCS[p.file]) await mnEnsureDeckFile(p.file, ask);
   const src = MN_DECK_DOCS[p.file];
   if(!src) return null;
   if(src.kind === 'img') return src.full[p.page] || null;
@@ -3741,7 +3820,10 @@ async function mnTickSlide(num){
   it.slides.push(num); it.slides.sort((a,b)=>a-b);
   mnDirty(); mnRenderSessKeepScroll();
   const p = mnDeck().pages.find(x=>x.num === num);
-  if(!p || !MN_DECK_DOCS[p.file]) return;
+  if(!p) return;
+  if(!MN_DECK_DOCS[p.file] && !(await mnEnsureDeckFile(p.file, false))){
+    showToast('Slaid ' + num + ' ditanda. Untuk ambil gambar, tekan ✂️ (fail slaid perlu dipilih semula sekali)', 'info'); return;
+  }
   const say = t=>{ const el = document.getElementById('msProg'); if(el) el.textContent = t; };
   say('Mencari graf/gambar dalam slaid ' + num + '…');
   try{
@@ -3892,8 +3974,8 @@ async function mnDetectImageBoxes(num, width){
 }
 let MN_CROP = null;
 async function mnCropSlide(num){
-  const img = await mnSlideImage(num, 1600);
-  if(!img){ alert('Fail slaid asal tiada dalam peranti ini. Upload semula fail slaid di langkah 3 (Slaid pembentangan), kemudian cuba lagi.'); return; }
+  const img = await mnSlideImage(num, 1600, true);
+  if(!img) return;
   const boxes = await mnDetectImageBoxes(num, img.width);
   MN_CROP = { num, img, boxes, sel: null };
   openModal(`<h3>Pilih graf / gambar — slaid ${num}</h3>
@@ -3956,7 +4038,9 @@ function mnSlideCaption(num){
 async function mnAutoCrop(it, num){
   if((it.crops||[]).some(c=>c.slide === num)) return 0;
   const p = mnDeck() && mnDeck().pages.find(x=>x.num === num);
-  if(!p || !MN_DECK_DOCS[p.file] || MN_DECK_DOCS[p.file].kind !== 'pdf') return 0;
+  if(!p) return 0;
+  if(!MN_DECK_DOCS[p.file] && !(await mnEnsureDeckFile(p.file, false))) return 0;
+  if(MN_DECK_DOCS[p.file].kind !== 'pdf') return 0;
   const img = await mnSlideImage(num, 1600); if(!img) return 0;
   const found = await mnDetectImageBoxes(num, img.width);
   mnAutoCrop.lastVector = found.some(b=>b.kind === 'vector');
