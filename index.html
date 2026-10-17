@@ -2627,9 +2627,56 @@ function minitKeyLines(lines, max){
 }
 /* style 'ringkas': "<pembentang> membentangkan slaid … yang merangkumi: • tajuk slaid"
    style 'dapatan': one sub-heading per slide with an opening sentence and key data */
+// English or Malay? (slides at UKI mix both; English lines are translated before use)
+const MINIT_EN_RE = /\b(the|and|of|to|in|with|who|which|from|for|are|is|was|were|at|by|since|onwards|has|have|been|this|that|these|patients?|cases?|positive|negative|confirmed|contact|least|prior|stayed|admitted|identified|following|may|used|where|ward|level|hospital|area|onset|symptoms?|due|staff|hand|hygiene|compliance|cleaning|rate|total|number|increase|decrease|investigation|outbreak|transmission|cubicle|risk|same)\b/gi;
+const MINIT_MS_RE = /\b(yang|dan|di|dengan|untuk|pada|telah|adalah|ialah|dari|daripada|kepada|bagi|oleh|ini|itu|akan|sebanyak|pesakit|kes|wad|kakitangan|mesyuarat|dalam|tidak|masih|sejak|seperti)\b/gi;
+function minitIsEnglish(l){
+  const en = (String(l).match(MINIT_EN_RE) || []).length, ms = (String(l).match(MINIT_MS_RE) || []).length;
+  return en > 0 && en > ms;
+}
+// "CASE DEFINITION (CASE):" / "Findings:" → a label that heads the lines below it
+function minitIsLabel(l){
+  const t = String(l||'').trim();
+  if(/:\s*$/.test(t) && t.length <= 70) return true;
+  const words = t.split(/\s+/);
+  return words.length <= 7 && t.length <= 60 && /[A-Z]{3,}/.test(t) && t === t.toUpperCase() && !/\d{2,}/.test(t);
+}
+function minitBlocks(lines){
+  const blocks = []; let cur = { label: '', lines: [] };
+  lines.forEach(l=>{
+    if(minitIsLabel(l)){ if(cur.label || cur.lines.length) blocks.push(cur); cur = { label: l.replace(/[:\s]+$/,'').trim(), lines: [] }; }
+    else cur.lines.push(l);
+  });
+  if(cur.label || cur.lines.length) blocks.push(cur);
+  return blocks;
+}
+// every piece of slide text that should be translated (labels, titles, lines)
+function minitTranslatables(pages){
+  const out = new Set();
+  pages.forEach(p=>minitCleanLines(p.text).forEach(l=>{
+    if(minitIsLabel(l)){ if(minitIsEnglish(l) || /[A-Z]{4,}/.test(l)) out.add(l.replace(/[:\s]+$/,'').trim()); }
+    else if(minitIsEnglish(l)) out.add(l);
+  }));
+  return Array.from(out);
+}
+function minitLcFirst(t){ t = String(t||'').trim(); return /^[A-Z]{2,}\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1); }
+// tidy a translated label: "DEFINISI KES (KES)" → "Definisi kes"; "(KONTAK RAPAT)" → "Definisi kontak rapat"
+function minitLabelText(t){
+  let x = minitSentenceCase(String(t||'').toLowerCase().replace(/\s+/g,' ').replace(/\(\s+/g,'(').replace(/\s+\)/g,')').trim());
+  x = x.charAt(0).toUpperCase() + x.slice(1);
+  let m = x.match(/^(definisi|takrif(?:an)?)\s+kes\s*\(([^)]+)\)$/i);
+  if(m) x = /^kes$/i.test(m[2].trim()) ? m[1] + ' kes' : m[1] + ' ' + m[2].trim();
+  m = x.match(/^(.*\b(\w+))\s*\(\s*\2\s*\)$/i); if(m) x = m[1];
+  return x.replace(/\brsv\b/gi,'RSV').replace(/\bcre\b/gi,'CRE').replace(/\bmrsa\b/gi,'MRSA').replace(/\bipc\b/gi,'IPC').replace(/\bhh\b/gi,'HH');
+}
+/* style 'ringkas': "<pembentang> membentangkan slaid … yang merangkumi: • tajuk slaid"
+   style 'dapatan': sentences built from each slide (labels become "X ialah …")
+   opts.tr: { original line → Malay translation } */
 function minitSentencesFromSlides(item, pages, opts){
   opts = opts || {};
   const style = opts.style || 'dapatan';
+  const tr = opts.tr || {};
+  const T = l=>{ const k = String(l||'').trim(); return tr[k] || tr[k.replace(/[:\s]+$/,'')] || k; };
   const title = String(item.title||'').replace(/^\d+(\.\d+)*\.?\s*/,'').trim();
   const lowTitle = title.toLowerCase();
   const slides = pages.map(p=>{ const lines = minitCleanLines(p.text); return { num: p.num, lines, title: minitSlideTitle(lines) }; }).filter(s=>s.lines.length);
@@ -2641,10 +2688,10 @@ function minitSentencesFromSlides(item, pages, opts){
     out.push((who ? who + ' membentangkan' : 'Mesyuarat dibentangkan dengan') + ' slaid ' + lowTitle.replace(/^pembentangan\s+/,'') + ' yang merangkumi:');
     const seen = new Set();
     slides.forEach(s=>{
-      const t = s.title || s.lines[0];
+      const t = minitLabelText(T(s.title || s.lines[0]));
       const k = t.toLowerCase();
       if(seen.has(k)) return; seen.add(k);
-      out.push('- ' + minitSentence(minitSentenceCase(t)));
+      out.push('- ' + minitSentence(t));
     });
     out.push(ref);
     return out.join('\n');
@@ -2652,15 +2699,40 @@ function minitSentencesFromSlides(item, pages, opts){
   const many = slides.length > 1;
   if(many) out.push('Mesyuarat dimaklumkan mengenai ' + lowTitle.replace(/^pembentangan\s+/,'') + ' seperti slaid yang dibentangkan.');
   const seenTitle = new Set(), seenLine = new Set();
+  let first = !many;
+  const fresh = l=>{ const k = l.toLowerCase(); if(seenLine.has(k)) return false; seenLine.add(k); return true; };
   slides.forEach(s=>{
-    const body = s.lines.filter(l=>l !== s.title);
-    const key = minitKeyLines(body, 6).filter(l=>{ const k = l.toLowerCase(); if(seenLine.has(k)) return false; seenLine.add(k); return true; });
-    if(!key.length && !s.title) return;
+    const titleIsLabel = s.title && minitIsLabel(s.title);
+    const body = s.lines.filter(l=>l !== s.title || titleIsLabel);
+    const blocks = minitBlocks(body);
+    const labelled = blocks.filter(b=>b.label && b.lines.length);
     const tk = (s.title||'').toLowerCase();
-    if(many && s.title && !seenTitle.has(tk)){ seenTitle.add(tk); out.push(''); out.push('## ' + s.title); }
-    if(key.length){
-      out.push(minitTopicIntro(s.title, key.join(' '), title));
-      key.forEach(l=>out.push('- ' + minitSentence(l)));
+    if(many && s.title && !titleIsLabel && !seenTitle.has(tk)){ seenTitle.add(tk); out.push(''); out.push('## ' + minitLabelText(T(s.title))); }
+    if(labelled.length){
+      // e.g. CASE DEFINITION (CASE): Patients admitted … → "Definisi kes ialah pesakit yang dimasukkan …"
+      blocks.forEach(b=>{
+        const lines = b.lines.filter(fresh).map(l=>T(l));
+        if(!lines.length) return;
+        if(!b.label){ lines.forEach(l=>out.push('- ' + minitSentence(l))); return; }
+        const lab = minitLabelText(T(b.label));
+        const isDef = /^(definisi|takrif)/i.test(lab);
+        if(lines.length === 1){
+          let sen = isDef ? lab + ' ialah ' + minitLcFirst(lines[0]) : lab + ': ' + minitLcFirst(lines[0]);
+          if(first){ sen = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(sen); first = false; }
+          out.push(minitSentence(sen));
+        } else {
+          let head = isDef ? lab + ' adalah seperti berikut:' : lab + ':';
+          if(first){ head = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(head); first = false; }
+          out.push(head);
+          lines.forEach(l=>out.push('- ' + minitSentence(l)));
+        }
+      });
+    } else {
+      const key = minitKeyLines(body, 6).filter(fresh);
+      if(!key.length) return;
+      out.push(minitTopicIntro(T(s.title), key.map(T).join(' '), title, s.title, key.join(' ')));
+      key.forEach(l=>out.push('- ' + minitSentence(T(l))));
+      first = false;
     }
   });
   out.push('');
@@ -3395,15 +3467,21 @@ function mnBulkGen(){
     <div class="seg" style="margin:12px 0 0;"><button class="active" id="bg_d" onclick="this.classList.add('active');document.getElementById('bg_r').classList.remove('active')">Dapatan terperinci</button><button id="bg_r" onclick="this.classList.add('active');document.getElementById('bg_d').classList.remove('active')">Ringkasan pembentangan</button></div>
     <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" onclick="mnDoBulkGen()">Jana ayat</button></div>`);
 }
-function mnDoBulkGen(){
+async function mnDoBulkGen(){
   const style = document.getElementById('bg_r').classList.contains('active') ? 'ringkas' : 'dapatan';
   const pick = Array.from(document.querySelectorAll('.bg_cb')).filter(c=>c.checked).map(c=>+c.value);
+  const allPages = pick.flatMap(i=>mnTickedPages(MN.data.items[i]).filter(p=>p.text && p.text.trim()));
+  const need = minitTranslatables(allPages).filter(l=>!MN_TR[l]);
+  if(need.length){
+    openModal(`<h3>Jana ayat untuk semua sesi</h3><div class="mn-progress">Menterjemah ${need.length} baris Bahasa Inggeris ke Bahasa Melayu…</div>`);
+    try{ await mnTranslate(need); }catch(err){ closeModal(); alert('Terjemahan gagal: ' + err.message); return; }
+  }
   closeModal();
   let done = 0;
   pick.forEach(i=>{
     const it = MN.data.items[i];
     const pages = mnTickedPages(it).filter(p=>p.text && p.text.trim());
-    let text = minitSentencesFromSlides(it, pages, { style });
+    let text = minitSentencesFromSlides(it, pages, { style, tr: MN_TR });
     if(!text) return;
     const cur = String(it.content||'').trim();
     const blank = !cur || /______/.test(cur) || /^Mesyuarat dimaklumkan berkenaan\s*\(?seperti slide yang dilampirkan\)?\.?$/i.test(cur);
@@ -3645,7 +3723,13 @@ function mnGenSentences(style){
   const people = (MN.data.attendees||[]).map(a=>a.name.replace(/\s*\((pengerusi|chairperson)\)\s*/i,' ').trim()).filter(Boolean);
   const presenter = (document.getElementById('gs_who') || {}).value || mnGenSentences._who || '';
   mnGenSentences._who = presenter;
-  const text = minitSentencesFromSlides(it, pages, { style, presenter });
+  const need = minitTranslatables(pages).filter(l=>!MN_TR[l]);
+  if(need.length){
+    openModal(`<h3>Ayat dari ${pages.length} slaid</h3><div class="mn-progress">Menterjemah ${need.length} baris Bahasa Inggeris ke Bahasa Melayu…</div>`);
+    mnTranslate(need).then(()=>mnGenSentences(style)).catch(err=>{ closeModal(); alert('Terjemahan gagal: ' + err.message); });
+    return;
+  }
+  const text = minitSentencesFromSlides(it, pages, { style, presenter, tr: MN_TR });
   const hasNotes = !!(it.content||'').trim() && !/______/.test(it.content);
   openModal(`<h3>Ayat dari ${pages.length} slaid</h3>
     <div class="seg" style="margin-bottom:10px;">
@@ -3653,13 +3737,23 @@ function mnGenSentences(style){
       <button class="${style==='ringkas'?'active':''}" onclick="mnGenSentences('ringkas')">Ringkasan pembentangan</button>
     </div>
     ${style==='ringkas' ? `<div class="field"><label for="gs_who">Dibentangkan oleh</label><select id="gs_who" onchange="mnGenSentences('ringkas')"><option value="">(tiada nama)</option>${people.map(p=>`<option ${p===presenter?'selected':''}>${mnEsc(p)}</option>`).join('')}</select></div>` : ''}
-    <div class="mn-help" style="margin:0 0 8px;">Semak dan betulkan ayat sebelum masukkan. Baris yang kelihatan seperti nama/IC pesakit dibuang secara automatik.</div>
+    <div class="mn-help" style="margin:0 0 8px;">Teks Bahasa Inggeris diterjemah secara automatik (Google Translate) — semak dan betulkan sebelum masukkan. Baris yang kelihatan seperti nama/IC pesakit dibuang dan tidak dihantar.</div>
     <textarea id="gs_text" class="mn-content" style="min-height:260px;">${mnEsc(text)}</textarea>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal()">Batal</button>
       ${hasNotes ? `<button class="btn secondary" onclick="mnUseSentences(true)">Ganti nota</button>` : ''}
       <button class="btn" onclick="mnUseSentences(false)">${hasNotes ? 'Tambah ke nota' : 'Masukkan ke nota'}</button>
     </div>`);
+}
+// English slide text → Malay (Google Translate through Apps Script), kept for this visit
+const MN_TR = {};
+async function mnTranslate(lines){
+  for(let i=0;i<lines.length;i+=60){
+    const part = lines.slice(i, i+60);
+    const r = await apiPost('translateLines', { lines: part, from: 'en', to: 'ms' });
+    if(!r.success) throw new Error(r.message || 'tidak dapat menterjemah');
+    (r.data.lines || []).forEach((t, k)=>{ if(t) MN_TR[part[k]] = String(t).trim(); });
+  }
 }
 function mnUseSentences(replace){
   const t = document.getElementById('gs_text').value;
