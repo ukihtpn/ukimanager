@@ -569,6 +569,27 @@
   .mn-crop-item img{width:120px;border-radius:6px;border:1px solid var(--line);flex-shrink:0;}
   .mn-crop-item input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;}
   .mn-crops code{background:#f1ece6;border-radius:4px;padding:0 4px;font-size:11.5px;}
+
+  /* saving popup (centre of screen) */
+  #mnSavePop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:160;pointer-events:none;opacity:0;transition:opacity .18s;}
+  #mnSavePop.show{opacity:1;}
+  #mnSavePop.busy.show{background:rgba(28,26,25,.18);pointer-events:auto;}
+  #mnSavePop .sp-card{background:#fff;border-radius:18px;padding:22px 30px;min-width:220px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 16px 40px rgba(0,0,0,.25);text-align:center;}
+  #mnSavePop.ok .sp-card{background:#1d6b31;color:#fff;}
+  #mnSavePop.err .sp-card{background:#b3261e;color:#fff;}
+  #mnSavePop strong{font-size:17px;}
+  #mnSavePop small{font-size:12.5px;opacity:.85;}
+  #mnSavePop .sp-ico{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;}
+  #mnSavePop .sp-spin{width:38px;height:38px;border-radius:50%;border:4px solid #eadfd9;border-top-color:var(--maroon);animation:spSpin .8s linear infinite;}
+  @keyframes spSpin{to{transform:rotate(360deg);}}
+  .mn-actions .mn-back{margin-right:auto;}
+  @media (max-width:900px){
+    .mn-sess-actions{gap:6px;}
+    .mn-sess-actions .btn{padding-left:6px;padding-right:6px;font-size:13px;}
+    .mn-sess-actions .mn-back span, .mn-sess-actions #msPrev span{display:none;}
+    .mn-sess-actions .mn-back, .mn-sess-actions #msPrev{flex:0 0 48px;}
+    .mn-actions .mn-back{margin-right:0;}
+  }
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -851,6 +872,7 @@
         </details>
 
         <div class="mn-actions">
+          <button class="btn secondary mn-back" onclick="mnBackToList()" title="Kembali ke senarai minit">☰ <span>Senarai minit</span></button>
           <button class="btn secondary" onclick="mnSaveClick()">💾 Simpan</button>
           <button class="btn secondary" onclick="mnPreview()">Pratonton</button>
           <button class="btn" onclick="mnFinalize()">Jana minit</button>
@@ -866,7 +888,8 @@
         </div>
         <div id="mnSessBody"></div>
         <div class="mn-actions mn-sess-actions">
-          <button class="btn secondary" id="msPrev" onclick="mnGoSess(-1)">‹ Sebelum</button>
+          <button class="btn secondary mn-back" onclick="mnCloseSess()" title="Kembali ke senarai sesi">☰ <span>Senarai sesi</span></button>
+          <button class="btn secondary" id="msPrev" onclick="mnGoSess(-1)">‹ <span>Sebelum</span></button>
           <button class="btn secondary" onclick="mnSessSave()">💾 Simpan</button>
           <button class="btn" id="msNext" onclick="mnGoSess(1)">Seterusnya ›</button>
         </div>
@@ -3155,9 +3178,12 @@ function mnNormalize(){
   MN.data.absent = MN.data.absent || [];
   MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; it.crops = it.crops || []; });
 }
-function mnBackToList(){
+async function mnBackToList(){
   const st = document.getElementById('mnSaveState').textContent;
-  if(/Belum/.test(st) && !confirm('Ada perubahan belum disimpan (salinan sementara ada dalam peranti ini). Kembali ke senarai?')) return;
+  if(/Belum/.test(st)){
+    const ok = await mnSaveWithPopup();
+    if(!ok && !confirm('Minit belum dapat disimpan (salinan sementara ada dalam peranti ini). Kembali ke senarai juga?')) return;
+  }
   loadMinits();
 }
 
@@ -3568,20 +3594,34 @@ function mnOpenSess(i){
 function mnUnsaved(){ return /Belum/.test(document.getElementById('mnSaveState').textContent); }
 function mnCloseSess(){
   MN_SESS = -1; mnShow('mnHomeView'); mnRenderSessions(); mnRenderDeck();
-  if(mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Sesi disimpan'); });
+  if(mnUnsaved()) mnSaveWithPopup();
 }
 function mnGoSess(delta){
   const j = MN_SESS + delta;
   if(j < 0 || j >= MN.data.items.length){ if(delta > 0) mnCloseSess(); return; }
-  if(mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Sesi ' + (MN_SESS - delta + 1) + ' disimpan', 'info'); });
+  if(mnUnsaved()) mnSaveWithPopup();
   mnOpenSess(j);
 }
-async function mnSessSave(){
-  if(await mnSave(true)) showToast('✓ Minit disimpan — ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
+// "Menyimpan…" in the middle of the screen, then a green "Telah disimpan"
+function mnSavePopup(state, msg){
+  let o = document.getElementById('mnSavePop');
+  if(!o){ o = document.createElement('div'); o.id = 'mnSavePop'; o.setAttribute('role','status'); o.setAttribute('aria-live','assertive'); document.body.appendChild(o); }
+  clearTimeout(mnSavePopup._t);
+  o.className = 'show ' + state;
+  o.innerHTML = state === 'busy' ? '<div class="sp-card"><span class="sp-spin" aria-hidden="true"></span><strong>Menyimpan…</strong><small>Jangan tutup app</small></div>'
+    : state === 'ok' ? '<div class="sp-card"><span class="sp-ico" aria-hidden="true">✓</span><strong>Telah disimpan</strong><small>' + (msg || '') + '</small></div>'
+    : '<div class="sp-card"><span class="sp-ico" aria-hidden="true">!</span><strong>Gagal disimpan</strong><small>' + (msg || 'Cuba lagi') + '</small></div>';
+  if(state !== 'busy') mnSavePopup._t = setTimeout(()=>{ o.className = state; }, state === 'ok' ? 1400 : 3500);
 }
-async function mnSaveClick(){
-  if(await mnSave(true)) showToast('✓ Minit disimpan — ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
+async function mnSaveWithPopup(){
+  mnSavePopup('busy');
+  const ok = await mnSave(true);
+  if(ok) mnSavePopup('ok', 'Pada ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
+  else mnSavePopup('err', 'Salinan sementara masih ada dalam peranti ini');
+  return ok;
 }
+async function mnSessSave(){ return mnSaveWithPopup(); }
+async function mnSaveClick(){ return mnSaveWithPopup(); }
 function mnSetItem(key, val){ MN.data.items[MN_SESS][key] = val; mnDirty(); }
 
 // phrases commonly used in UKI minutes
@@ -3708,7 +3748,9 @@ async function mnTickSlide(num){
     const n = await mnAutoCrop(it, num);
     say('');
     if(MN.data.items[MN_SESS] === it){ mnDirty(); mnRenderSessKeepScroll(); }
-    showToast(n ? '✓ ' + n + ' graf/gambar diambil dari slaid ' + num : 'Slaid ' + num + ': tiada gambar dikesan — tekan ✂️ untuk pilih graf sendiri', n ? 'ok' : 'info');
+    showToast(n ? '✓ ' + n + ' graf/gambar diambil dari slaid ' + num
+      : mnAutoCrop.lastVector ? 'Slaid ' + num + ': ada graf/jadual dilukis — tekan ✂️ Pilih graf/gambar untuk semak & simpan'
+      : 'Slaid ' + num + ': tiada gambar dikesan (teks sahaja)', n ? 'ok' : 'info');
   }catch(err){ say(''); showToast('✗ Gagal ambil gambar slaid ' + num + ': ' + err.message, 'err'); }
 }
 function mnTickSuggested(){
@@ -3792,7 +3834,7 @@ async function mnDetectImageBoxes(num, width){
     const vp = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
     const ops = await page.getOperatorList(), O = window.pdfjsLib.OPS;
     const mul = (a, b)=>[a[0]*b[0]+a[2]*b[1], a[1]*b[0]+a[3]*b[1], a[0]*b[2]+a[2]*b[3], a[1]*b[2]+a[3]*b[3], a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5]];
-    let ctm = vp.transform.slice(); const stack = [], boxes = [];
+    let ctm = vp.transform.slice(); const stack = [], boxes = [], paths = [];
     const imgOps = [O.paintImageXObject, O.paintJpegXObject, O.paintInlineImageXObject, O.paintImageXObjectRepeat].filter(x=>x != null);
     ops.fnArray.forEach((fn, i)=>{
       if(fn === O.save) stack.push(ctm.slice());
@@ -3805,7 +3847,40 @@ async function mnDetectImageBoxes(num, width){
         const area = (b.x2-b.x)*(b.y2-b.y) / (vp.width*vp.height);
         if(area > 0.03 && area < 0.92) boxes.push({ x: b.x, y: b.y, w: b.x2-b.x, h: b.y2-b.y, area });
       }
+      else if(fn === O.constructPath){
+        // drawn shapes (charts and tables made in PowerPoint/Excel): [minX, maxX, minY, maxY]
+        const mm = ops.argsArray[i] && ops.argsArray[i][2];
+        if(mm && isFinite(mm[0]) && isFinite(mm[2])){
+          const pts = [[mm[0],mm[2]],[mm[1],mm[2]],[mm[0],mm[3]],[mm[1],mm[3]]].map(([x,y])=>[ctm[0]*x+ctm[2]*y+ctm[4], ctm[1]*x+ctm[3]*y+ctm[5]]);
+          const xs = pts.map(q=>q[0]), ys = pts.map(q=>q[1]);
+          const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+          if(w < vp.width*0.85 && h < vp.height*0.85 && (w > 1 || h > 1)) paths.push({ x, y, w, h });
+        }
+      }
     });
+    // many shapes close together = a drawn chart or table → one suggested box around them
+    if(paths.length >= 6){
+      const gap = vp.width * 0.025, groups = [];
+      paths.forEach(p=>{
+        let g = groups.find(g=>p.x <= g.x2 + gap && p.x + p.w >= g.x - gap && p.y <= g.y2 + gap && p.y + p.h >= g.y - gap);
+        if(!g){ g = { x: p.x, y: p.y, x2: p.x + p.w, y2: p.y + p.h, n: 0 }; groups.push(g); }
+        g.x = Math.min(g.x, p.x); g.y = Math.min(g.y, p.y); g.x2 = Math.max(g.x2, p.x + p.w); g.y2 = Math.max(g.y2, p.y + p.h); g.n++;
+      });
+      // merge groups that grew into each other
+      for(let a=0;a<groups.length;a++) for(let b2=groups.length-1;b2>a;b2--){
+        const A = groups[a], B = groups[b2];
+        if(B.x <= A.x2 + gap && B.x2 >= A.x - gap && B.y <= A.y2 + gap && B.y2 >= A.y - gap){
+          A.x = Math.min(A.x, B.x); A.y = Math.min(A.y, B.y); A.x2 = Math.max(A.x2, B.x2); A.y2 = Math.max(A.y2, B.y2); A.n += B.n; groups.splice(b2, 1);
+        }
+      }
+      groups.filter(g=>g.n >= 6).sort((a,b)=>b.n - a.n).slice(0, 2).forEach(g=>{
+        const pad = vp.width * 0.012;
+        const b = { x: Math.max(0, g.x - pad), y: Math.max(0, g.y - pad), x2: Math.min(vp.width, g.x2 + pad), y2: Math.min(vp.height, g.y2 + pad) };
+        const area = (b.x2-b.x)*(b.y2-b.y) / (vp.width*vp.height);
+        if(area > 0.06 && area < 0.92 && !boxes.some(o=>o.x <= b.x+4 && o.y <= b.y+4 && o.x+o.w >= b.x2-4 && o.y+o.h >= b.y2-4))
+          boxes.push({ x: b.x, y: b.y, w: b.x2-b.x, h: b.y2-b.y, area, kind: 'vector' });
+      });
+    }
     // text written on top of an image means the image is a background/decoration, not a graph
     try{
       const tc = await page.getTextContent(), U = window.pdfjsLib.Util;
@@ -3840,6 +3915,10 @@ async function mnCropSlide(num){
   wrap.addEventListener('pointerdown', e=>{ if(e.target.classList.contains('mn-crop-sug')) return; start = pos(e); wrap.setPointerCapture(e.pointerId); e.preventDefault(); });
   wrap.addEventListener('pointermove', e=>{ if(start) draw(start, pos(e)); });
   wrap.addEventListener('pointerup', e=>{ if(start){ draw(start, pos(e)); start = null; } });
+  // preselect the most likely graph (a picture without text on it, else a drawn chart)
+  const rank = b=>b.kind === 'vector' ? 1 : ((b.textInside||0) < 25 ? 0 : 2);   // picture → drawn chart → background
+  const best = boxes.map((b, k)=>({ b, k })).sort((p, q)=>rank(p.b) - rank(q.b) || q.b.area - p.b.area)[0];
+  if(best) mnCropPick(best.k);
 }
 function mnCropPick(k){
   const b = MN_CROP.boxes[k], W = MN_CROP.img.width, H = MN_CROP.img.height;
@@ -3879,7 +3958,10 @@ async function mnAutoCrop(it, num){
   const p = mnDeck() && mnDeck().pages.find(x=>x.num === num);
   if(!p || !MN_DECK_DOCS[p.file] || MN_DECK_DOCS[p.file].kind !== 'pdf') return 0;
   const img = await mnSlideImage(num, 1600); if(!img) return 0;
-  const boxes = (await mnDetectImageBoxes(num, img.width)).filter(b=>b.area >= 0.06 && (b.textInside||0) < 25)
+  const found = await mnDetectImageBoxes(num, img.width);
+  mnAutoCrop.lastVector = found.some(b=>b.kind === 'vector');
+  // drawn charts/tables are only suggested (a drawn table may be a patient line list)
+  const boxes = found.filter(b=>b.kind !== 'vector' && b.area >= 0.06 && (b.textInside||0) < 25)
     .sort((a,b)=>b.area - a.area);
   // drop boxes inside a bigger one already taken
   const take = [];
