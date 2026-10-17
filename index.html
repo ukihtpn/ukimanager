@@ -617,6 +617,36 @@
   @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.45);}50%{box-shadow:0 0 0 8px rgba(198,40,40,0);}}
   .mn-mic-live{display:flex;gap:8px;align-items:center;background:#fdecec;border:1px solid #f2b8b5;color:#7a1414;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:8px;}
   .mn-mic-dot{width:10px;height:10px;border-radius:50%;background:#c62828;flex-shrink:0;animation:micPulse 1.4s ease-in-out infinite;}
+
+  /* mobile: slides in one horizontal strip so the notes stay close */
+  @media (max-width:900px){
+    .mn-pick{display:flex;grid-template-columns:none;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 2px 10px;margin:0 -2px;}
+    .mn-pick-card{flex:0 0 46%;max-width:190px;scroll-snap-align:start;}
+    .mn-pick > .mn-help{flex:1 0 100%;}
+    .mn-pick-hint{display:block !important;}
+    .mn-crop-item img{width:84px;}
+    .mn-crops .mn-help{display:none;}
+  }
+  .mn-pick-hint{display:none;font-size:11.5px;color:var(--muted);margin:-4px 0 6px;}
+
+  /* meeting recording */
+  .mn-recblock{border-color:#f2c9cf;}
+  .mn-rec-start{background:#c62828;}
+  .mn-rec-live{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fdecec;border:1px solid #f2b8b5;border-radius:12px;padding:10px 12px;color:#7a1414;}
+  .mn-rec-live .mn-rec-time{font-variant-numeric:tabular-nums;font-weight:800;font-size:18px;}
+  .mn-rec-live .btn{margin-left:auto;background:#c62828;}
+  .mn-rec-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .mn-rec-item{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;background:#fbf9f7;border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
+  .mn-rec-st{color:var(--green);font-weight:600;font-size:12px;}
+  .mn-rec-pill{position:sticky;top:64px;z-index:25;display:flex;align-items:center;gap:8px;background:#c62828;color:#fff;border-radius:999px;padding:6px 8px 6px 14px;font-weight:800;font-size:13px;margin:0 0 10px;width:max-content;box-shadow:0 4px 12px rgba(198,40,40,.35);}
+  .mn-rec-pill .mn-mic-dot{background:#fff;}
+  .mn-rec-pill .mn-rec-time{font-variant-numeric:tabular-nums;}
+  .mn-rec-pill button{border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:999px;padding:4px 10px;font-weight:700;font-family:inherit;cursor:pointer;}
+  @media (min-width:901px){ .mn-rec-pill{top:12px;} }
+  .mn-rec-sess audio{margin:4px 0 8px;}
+  .mn-rec-ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .mn-rec-item.sel{border-color:var(--maroon);background:#fdf3f5;}
+  .mn-rec-start:disabled{opacity:.45;}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -881,6 +911,12 @@
           </div>
         </section>
 
+        <section class="mn-block mn-recblock">
+          <div class="mn-block-head"><h2>🎙 Rakaman mesyuarat <span class="mn-count" id="mnRecCount"></span></h2></div>
+          <div class="mn-help">Rakam seluruh mesyuarat dan simpan di Google Drive UKI. Bila anda buka sesi semasa merakam, app tanda masa sesi itu — selepas mesyuarat, dengar semula bahagian sesi itu sambil menulis nota.</div>
+          <div id="mnRecBox"></div>
+        </section>
+
         <section class="mn-block">
           <div class="mn-block-head"><h2><span class="mn-step">3</span>Slaid pembentangan <span class="mn-count" id="mnDeckCount"></span></h2></div>
           <div class="mn-help">Upload <strong>sekali sahaja</strong> untuk seluruh mesyuarat. Kemudian dalam setiap sesi, tick slaid yang berkaitan — app jadikan isi slaid itu ayat minit.</div>
@@ -913,6 +949,7 @@
           <span id="mnSessPos" class="mn-savestate" style="margin-left:0;"></span>
           <span id="mnSaveState2" class="mn-savestate"></span>
         </div>
+        <div id="mnRecPillSess"></div>
         <div id="mnSessBody"></div>
         <div class="mn-actions mn-sess-actions">
           <button class="btn secondary mn-back" onclick="mnCloseSess()" title="Kembali ke senarai sesi">☰ <span>Senarai sesi</span></button>
@@ -2615,8 +2652,15 @@ function minitLooksLikePatientRow(l){
   if(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+(index|c\/c|case|kes)\b/i.test(l)) return true;
   if(/\b(index|c\/c)\b/i.test(l) && /[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}/.test(l) && /\d/.test(l)) return true;
   if(/\b\d{6}-\d{2}-\d{4}\b|\bRN\s*\d{5,}/i.test(l)) return true;   // IC / registration numbers
+  // case-list rows: patient initials next to a bed number or a test date ("POSITIF 12/10/2026 AV B12")
+  const inits = (l.match(/\b[A-Z]{2,3}\b/g) || []).filter(w=>MINIT_ACRO.indexOf(w) < 0);
+  if(inits.length && /\b(B|BED|KATIL)\s?\d{1,3}\b/i.test(l)) return true;
+  if(inits.length && /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/.test(l) && /positi|negati|detected|hubungi|contact|kes|case|index|indeks/i.test(l)) return true;
+  if(/\b(tarikh|date)\b.*\b(pesakit|patient|nama|name)\b.*\b(katil|bed)\b/i.test(l)) return true;   // table header of a line list
   return false;
 }
+// common abbreviations that are not patient initials
+const MINIT_ACRO = 'RSV CRE MRSA MRO VRE ESBL ICU SCN NICU PICU HDU CCU ISO PCR NPA HH IPC UKI UPKI HTPN KKM JKN MO HO SN PPK PPP OMT CDC KJ PJ JT EW PPE ABHR SOP DCA HEH WHO OT ED ETD CBD IV ICN IC LN HCW CVC CLABSI SSI VAP CAUTI ER AM PM NO BIL'.split(' ');
 function minitSlideLines(text){
   const raw = String(text||'').split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
   const merged = [];
@@ -2724,6 +2768,12 @@ function minitTranslatables(pages){
   }));
   return Array.from(out);
 }
+// a slide made of many short labels (bed map, timeline, flow chart) rather than sentences
+function minitIsDiagram(lines){
+  if(!lines || lines.length < 7) return false;
+  const short = lines.filter(l=>l.split(/\s+/).filter(w=>/[a-zA-Z]{2,}/.test(w)).length <= 2).length;
+  return short / lines.length >= 0.45;
+}
 function minitLcFirst(t){ t = String(t||'').trim(); return /^[A-Z]{2,}\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1); }
 // tidy a translated label: "DEFINISI KES (KES)" → "Definisi kes"; "(KONTAK RAPAT)" → "Definisi kontak rapat"
 function minitLabelText(t){
@@ -2769,6 +2819,16 @@ function minitSentencesFromSlides(item, pages, opts){
   const crops = opts.crops || {};
   slides.forEach(s=>{
     const titleIsLabel = s.title && minitIsLabel(s.title);
+    // ward maps, timelines and flow charts: many short labels, no sentences → describe, don't copy
+    if(!(crops[s.num]||[]).length && minitIsDiagram(s.lines)){
+      const what = minitLcFirst(minitLabelText(T(s.title || ''))) || 'rajah yang dibentangkan';
+      let sen = 'Mesyuarat dimaklumkan mengenai ' + what + ' seperti dalam slaid pembentangan (slaid ' + s.num + ').';
+      first = false;
+      out.push(''); out.push(sen);
+      const real = s.lines.filter(l=>l !== s.title && l.split(/\s+/).filter(w=>/[a-zA-Z]{3,}/.test(w)).length >= 6 && !minitLooksLikePatientRow(l)).filter(fresh).slice(0, 3);
+      real.forEach(l=>out.push('- ' + minitSentence(T(l))));
+      return;
+    }
     if((crops[s.num]||[]).length){
       // a graph/picture was cut from this slide: explain the picture, keep only key figures
       const what = minitLcFirst(minitLabelText(T(s.title || ''))) || 'data yang dibentangkan';
@@ -3203,6 +3263,7 @@ async function mnDelete(id){
 function mnNormalize(){
   Object.keys(MN_DECK_DOCS).forEach(k=>delete MN_DECK_DOCS[k]);
   MN.data.absent = MN.data.absent || [];
+  MN.data.recordings = MN.data.recordings || [];
   MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; it.crops = it.crops || []; });
 }
 async function mnBackToList(){
@@ -3241,6 +3302,7 @@ function mnRenderHome(){
   mnRenderAttendance();
   mnRenderSessions();
   mnRenderDeck();
+  mnRenderRec();
   document.getElementById('mn_pby').value = d.prepared_by || '';
   document.getElementById('mn_prole').value = d.prepared_role || '';
   document.getElementById('mn_vby').value = d.verified_by || '';
@@ -3400,6 +3462,7 @@ function mnRenderSessions(){
     const slides = (it.slides||[]).length;
     const bits = [];
     if(slides) bits.push(slides + ' slaid ditanda');
+    if((it.recs||[]).length) bits.push('🎙 ' + it.recs.length + ' rakaman');
     if((it.figures||[]).length && it.attach_images) bits.push(it.figures.length + ' gambar');
     if((it.tindakan||'').trim()) bits.push('Tindakan: ' + it.tindakan.trim());
     return `<button class="mn-sess" onclick="mnOpenSess(${i})">
@@ -3694,9 +3757,11 @@ async function mnZoomDeck(num){
 /* ---------- session ---------- */
 function mnOpenSess(i){
   mnMicStop();
+  if(MN_REC.rec && MN_REC.mode === 'session' && MN_REC.item !== i){ showToast('⏹ Rakaman sesi ' + (MN_REC.item+1) + ' dihentikan & disimpan', 'info'); mnRecStop(); }
   MN_SESS = i; MN_SLIDE_FILTER = 'all';
+  if(MN_REC.rec) mnRecMark(i, false);   // recording: this session starts now
   mnShow('mnSessView');
-  mnRenderSess();
+  mnRenderSess(); mnRenderRec();
 }
 function mnUnsaved(){ return /Belum/.test(document.getElementById('mnSaveState').textContent); }
 function mnCloseSess(){
@@ -3775,7 +3840,8 @@ function mnRenderSess(){
         </div>
         ${suggest.size ? `<button class="at-link" onclick="mnTickSuggested()">Tick cadangan (${suggest.size})</button>` : ''}
       </div>
-      <div class="mn-pick">${pages.map(p=>`
+      <div class="mn-pick-hint">← Leret ke kiri/kanan untuk lihat slaid lain →</div>
+      <div class="mn-pick" id="mnPick">${pages.map(p=>`
         <div class="mn-pick-card ${ticked.has(p.num)?'on':''}" onclick="mnTickSlide(${p.num})" role="checkbox" aria-checked="${ticked.has(p.num)}" tabindex="0" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();mnTickSlide(${p.num})}">
           ${p.thumb ? `<img src="${p.thumb}" alt="Slaid ${p.num}">` : `<div class="mn-thumb-ph">${p.num}</div>`}
           <span class="mn-pick-box" aria-hidden="true">${ticked.has(p.num) ? '✓' : ''}</span>
@@ -3814,10 +3880,11 @@ function mnRenderSess(){
       </div>` : ''}
     </section>
 
+    ${mnRecSessHtml(i)}
     <section class="mn-block">
       <div class="mn-block-head mn-notes-head"><h2>Nota perbincangan</h2>
         <div class="mn-mic-wrap">
-          <select id="micLang" class="mn-mic-lang" aria-label="Bahasa rakaman" onchange="MN_MIC.lang=this.value"><option value="ms-MY" ${MN_MIC.lang==='ms-MY'?'selected':''}>BM</option><option value="en-US" ${MN_MIC.lang==='en-US'?'selected':''}>EN</option></select>
+          <select id="micLang" class="mn-mic-lang" aria-label="Bahasa rakaman" onchange="mnMicLang(this.value)"><option value="ms-MY" ${MN_MIC.lang==='ms-MY'?'selected':''}>BM</option><option value="en-US" ${MN_MIC.lang==='en-US'?'selected':''}>EN</option></select>
           <button type="button" class="mn-mic ${MN_MIC.on ? 'on' : ''}" id="micBtn" onclick="mnMicToggle()">${MN_MIC.on ? '⏹ Berhenti' : '🎤 Rakam suara'}</button>
         </div></div>
       <div class="mn-mic-live ${MN_MIC.on ? '' : 'hidden'}" id="micLive" aria-live="polite"><span class="mn-mic-dot"></span><span id="micText">Sedang mendengar… cakap dengan jelas. Sebut <b>"titik"</b>, <b>"koma"</b> atau <b>"baris baru"</b>.</span></div>
@@ -3841,7 +3908,11 @@ function mnRenderSess(){
     </section>`;
 }
 function mnSlideFilter(f){ MN_SLIDE_FILTER = f; mnRenderSessKeepScroll(); }
-function mnRenderSessKeepScroll(){ const y = window.scrollY; mnRenderSess(); window.scrollTo(0, y); }
+function mnRenderSessKeepScroll(){
+  const y = window.scrollY, strip = document.getElementById('mnPick'), x = strip ? strip.scrollLeft : 0;
+  mnRenderSess(); mnRenderRec(); window.scrollTo(0, y);
+  const s2 = document.getElementById('mnPick'); if(s2) s2.scrollLeft = x;
+}
 async function mnTickSlide(num){
   const it = MN.data.items[MN_SESS];
   const k = it.slides.indexOf(num);
@@ -4117,6 +4188,256 @@ async function mnCropSave(){
     showToast('✓ Gambar disimpan — akan masuk dalam minit sebagai Rajah');
   }catch(err){ btn.disabled = false; btn.textContent = 'Simpan bahagian dipilih'; alert('Gagal simpan gambar: ' + err.message); }
 }
+/* ---------- 🎙 meeting recording: record, keep in Drive, listen per session ----------
+   MN.data.recordings = [{ key, id (Drive), mime, dur, at }]
+   item.marks = { [recording key]: seconds into the recording when the session started } */
+const MN_REC = { rec: null, stream: null, chunks: [], start: 0, key: '', timer: null, wake: null, mime: '' };
+const MN_REC_URL = {};   // recording key → playable blob URL (this visit)
+function mnFmtTime(sec){ sec = Math.max(0, Math.round(sec||0)); const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), x = sec%60; return (h ? h + ':' + String(m).padStart(2,'0') : m) + ':' + String(x).padStart(2,'0'); }
+function mnRecElapsed(){ return MN_REC.rec ? (Date.now() - MN_REC.start)/1000 : 0; }
+function mnRecMark(i, force){
+  const it = MN.data.items[i]; if(!it || !MN_REC.rec || MN_REC.mode !== 'meeting') return;
+  it.marks = it.marks || {};
+  if(force || it.marks[MN_REC.key] == null){ it.marks[MN_REC.key] = Math.max(0, Math.round(mnRecElapsed()) - 3); mnDirty(); }
+}
+async function mnRecStart(mode, item){
+  mode = mode === 'session' ? 'session' : 'meeting';
+  if(MN_REC.rec){ alert('Rakaman lain sedang berjalan. Hentikan dahulu.'); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){ alert('Rakaman tidak disokong dalam pelayar ini. Guna Google Chrome (Android/komputer) atau Safari (iPhone).'); return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } }); }
+  catch(e){ alert('Mikrofon tidak dapat dibuka: ' + e.message + '\nBenarkan mikrofon untuk laman ini (ikon 🔒 di sebelah alamat web).'); return; }
+  const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(m=>{ try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || '';
+  const rec = new MediaRecorder(stream, Object.assign({ audioBitsPerSecond: 32000 }, mime ? { mimeType: mime } : {}));
+  Object.assign(MN_REC, { rec, stream, chunks: [], start: Date.now(), key: 'R' + Date.now(), mime: rec.mimeType || mime || 'audio/webm', mode, item: mode === 'session' ? item : -1 });
+  rec.ondataavailable = e=>{ if(e.data && e.data.size) MN_REC.chunks.push(e.data); };
+  rec.start(5000);
+  try{ if(navigator.wakeLock) MN_REC.wake = await navigator.wakeLock.request('screen'); }catch(e){}
+  if(mode === 'meeting' && MN_SESS >= 0) mnRecMark(MN_SESS, true);
+  MN_REC.timer = setInterval(mnRecTick, 1000);
+  window.addEventListener('beforeunload', mnRecWarn);
+  mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll(); mnRecTick();
+  showToast(mode === 'session' ? '🔴 Merakam sesi ini — tekan ⏹ bila selesai' : '🔴 Rakaman bermula — biarkan skrin terbuka', 'info');
+}
+function mnRecWarn(e){ if(MN_REC.rec){ e.preventDefault(); e.returnValue = 'Rakaman masih berjalan.'; return e.returnValue; } }
+function mnRecTick(){
+  const t = mnFmtTime(mnRecElapsed());
+  document.querySelectorAll('.mn-rec-time').forEach(el=>{ el.textContent = t; });
+}
+async function mnRecStop(){
+  const R = MN_REC; if(!R.rec) return;
+  const stopped = new Promise(res=>{ R.rec.onstop = res; });
+  try{ R.rec.stop(); }catch(e){}
+  await stopped;
+  R.stream.getTracks().forEach(t=>t.stop());
+  clearInterval(R.timer);
+  try{ R.wake && R.wake.release(); }catch(e){}
+  window.removeEventListener('beforeunload', mnRecWarn);
+  const dur = Math.round((Date.now() - R.start)/1000);
+  const blob = new Blob(R.chunks, { type: R.mime });
+  const entry = { key: R.key, mime: R.mime, dur, at: new Date(R.start).toISOString(), size: blob.size };
+  MN_REC_URL[R.key] = URL.createObjectURL(blob);
+  const mode = R.mode, item = R.item;
+  MN_REC.rec = null; MN_REC.stream = null; MN_REC.chunks = []; MN_REC.mode = ''; MN_REC.item = -1;
+  if(mode === 'session' && MN.data.items[item]){ const it = MN.data.items[item]; (it.recs = it.recs || []).push(entry); MN_SREC_KEY = entry.key; }
+  else MN.data.recordings.push(entry);
+  mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll();
+  await mnRecUpload(entry, blob);
+}
+async function mnRecUpload(entry, blob){
+  if(blob.size > 35*1024*1024){
+    entry.local = true; mnDirty(); mnRenderRec();
+    alert('Rakaman terlalu besar untuk disimpan ke Drive melalui app (' + Math.round(blob.size/1048576) + 'MB). Tekan "Simpan ke peranti" untuk simpan salinan.');
+    return;
+  }
+  mnSavePopup('busy');
+  try{
+    const ext = /mp4/.test(entry.mime) ? 'm4a' : /ogg/.test(entry.mime) ? 'ogg' : 'webm';
+    const up = await apiPost('uploadMinitFigure', { base64: await mnBlobToBase64(blob), filename: 'rakaman_minit_' + entry.key + '.' + ext, mimeType: entry.mime.split(';')[0] });
+    if(!up.success) throw new Error(up.message || 'gagal simpan');
+    entry.id = up.data.id; delete entry.local;
+    const ok = await mnSave(true);
+    mnSavePopup(ok ? 'ok' : 'err', ok ? 'Rakaman ' + mnFmtTime(entry.dur) + ' disimpan di Drive' : 'Rakaman di Drive, minit belum disimpan');
+  }catch(err){
+    entry.local = true; mnDirty();
+    mnSavePopup('err', 'Rakaman belum disimpan ke Drive — tekan "Simpan ke peranti"');
+  }
+  mnRenderRec();
+}
+function mnRecFind(key){
+  return (MN.data.recordings||[]).concat(...MN.data.items.map(it=>it.recs||[])).find(e=>e.key === key);
+}
+function mnRecDownload(k){
+  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k], url = e && MN_REC_URL[e.key]; if(!url) return;
+  const a = document.createElement('a'); a.href = url; a.download = 'rakaman_minit_' + e.key + (/mp4/.test(e.mime) ? '.m4a' : '.webm');
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function mnRecRetry(k){
+  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k], url = e && MN_REC_URL[e.key]; if(!url) return;
+  const blob = await (await fetch(url)).blob(); await mnRecUpload(e, blob);
+}
+function mnRenderRec(){
+  const box = document.getElementById('mnRecBox'); if(!box) return;
+  const recs = MN.data.recordings || [];
+  document.getElementById('mnRecCount').textContent = recs.length ? recs.length + ' rakaman' : '';
+  const live = MN_REC.rec ? `<div class="mn-rec-live"><span class="mn-mic-dot"></span><strong>${MN_REC.mode === 'session' ? 'Merakam sesi ' + (MN_REC.item+1) : 'Sedang merakam'}</strong> <span class="mn-rec-time">0:00</span>
+      <button class="btn small" onclick="mnRecStop()">⏹ Berhenti &amp; simpan</button></div>
+      <div class="mn-help" style="margin:6px 0 0;">Buka setiap sesi bila perkara itu mula dibincang — masa akan ditanda. Biarkan skrin terbuka.</div>`
+    : `<button class="btn small mn-rec-start" onclick="mnRecStart('meeting')">🔴 Mula rakam seluruh mesyuarat</button>
+       <div class="mn-help" style="margin:6px 0 0;">Atau rakam sesi tertentu sahaja — buka sesi itu dan tekan <strong>🔴 Rakam sesi ini</strong>.</div>`;
+  box.innerHTML = live + (recs.length ? `<div class="mn-rec-list">${recs.map((e, k)=>`<div class="mn-rec-item">
+      <span>🎧 Rakaman ${k+1} · ${mnFmtTime(e.dur)} · ${new Date(e.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
+      <span class="mn-rec-st">${e.id ? '✓ di Drive' : e.local ? '<b style="color:var(--red)">belum di Drive</b>' : 'menyimpan…'}</span>
+      ${e.local && MN_REC_URL[e.key] ? `<button class="at-link" onclick="mnRecRetry(${k})">Cuba simpan semula</button><button class="at-link" onclick="mnRecDownload(${k})">Simpan ke peranti</button>` : ''}
+    </div>`).join('')}</div>` : '');
+  const pill = document.getElementById('mnRecPillSess');
+  if(pill) pill.innerHTML = MN_REC.rec ? `<div class="mn-rec-pill"><span class="mn-mic-dot"></span>REC${MN_REC.mode === 'session' ? ' sesi ' + (MN_REC.item+1) : ''} <span class="mn-rec-time"></span><button onclick="mnRecStop()">⏹ Berhenti</button></div>` : '';
+  mnRecTick();
+}
+// session view: where this session starts in each recording, with a player
+function mnRecSessHtml(i){
+  return mnSessRecHtml(i) + mnMeetRecHtml(i);
+}
+// recordings made for this session only
+let MN_SREC_KEY = '';
+function mnSessRecHtml(i){
+  const it = MN.data.items[i], recs = it.recs || [];
+  const busyHere = MN_REC.rec && MN_REC.mode === 'session' && MN_REC.item === i;
+  const busyOther = MN_REC.rec && !busyHere;
+  const playable = recs.filter(e=>e.id || MN_REC_URL[e.key]);
+  const cur = playable.find(e=>e.key === MN_SREC_KEY) || playable[playable.length - 1];
+  return `<section class="mn-block mn-rec-sess"><div class="mn-block-head"><h2>🎙 Rakaman sesi ini ${recs.length ? `<span class="mn-count">${recs.length}</span>` : ''}</h2></div>
+    ${busyHere ? `<div class="mn-rec-live"><span class="mn-mic-dot"></span><strong>Merakam sesi ini</strong> <span class="mn-rec-time">0:00</span><button class="btn small" onclick="mnRecStop()">⏹ Berhenti &amp; simpan</button></div>`
+      : `<button class="btn small mn-rec-start" onclick="mnRecStart('session', ${i})" ${busyOther ? 'disabled' : ''}>🔴 Rakam sesi ini</button>
+         ${busyOther ? `<div class="mn-help" style="margin:6px 0 0;">${MN_REC.mode === 'meeting' ? 'Rakaman seluruh mesyuarat sedang berjalan — sesi ini termasuk dalam rakaman itu.' : 'Sesi ' + (MN_REC.item+1) + ' sedang dirakam.'}</div>` : `<div class="mn-help" style="margin:6px 0 0;">Rakam bahagian sesi ini sahaja. Tekan ⏹ bila selesai — disimpan untuk sesi ini.</div>`}`}
+    ${recs.length ? `<div class="mn-rec-list">${recs.map((e, k)=>`<div class="mn-rec-item ${cur && e.key === cur.key ? 'sel' : ''}">
+        <button class="at-link" style="padding:0;" onclick="MN_SREC_KEY='${e.key}';mnSessPlay()">▶ Rakaman ${k+1}</button>
+        <span>${mnFmtTime(e.dur)} · ${new Date(e.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
+        <span class="mn-rec-st">${e.id ? '✓ di Drive' : e.local ? '<b style="color:var(--red)">belum di Drive</b>' : 'menyimpan…'}</span>
+        ${e.local && MN_REC_URL[e.key] ? `<button class="at-link" onclick="mnRecRetry('${e.key}')">Cuba simpan semula</button><button class="at-link" onclick="mnRecDownload('${e.key}')">Simpan ke peranti</button>` : ''}
+        <button class="at-link memo-del" style="margin-left:auto;" onclick="mnSessRecDelete(${i}, '${e.key}')">Buang</button>
+      </div>`).join('')}</div>
+      ${playable.length ? `<audio id="sessAudio" controls preload="none" style="width:100%;margin-top:8px;"></audio>
+      <div class="mn-rec-ctrl"><button class="mn-iconbtn" onclick="mnAuSkip('sessAudio',-10)">⏪ 10s</button><button class="mn-iconbtn" onclick="mnAuSkip('sessAudio',10)">10s ⏩</button><button class="mn-iconbtn" id="sessSpeed" onclick="mnAuSpeed('sessAudio','sessSpeed')">1×</button></div>
+      <div id="sessProg" class="mn-progress"></div>` : ''}` : ''}
+  </section>`;
+}
+async function mnSessPlay(){
+  const it = MN.data.items[MN_SESS], recs = (it.recs || []).filter(e=>e.id || MN_REC_URL[e.key]);
+  const e = recs.find(x=>x.key === MN_SREC_KEY) || recs[recs.length - 1];
+  document.querySelectorAll('.mn-rec-sess .mn-rec-item').forEach(el=>el.classList.remove('sel'));
+  const au = await mnLoadAudio(e, 'sessAudio', 'sessProg'); if(au) au.play().catch(()=>{});
+}
+function mnSessRecDelete(i, key){
+  if(!confirm('Buang rakaman ini dari sesi? (Fail di Drive tidak dipadam.)')) return;
+  const it = MN.data.items[i]; it.recs = (it.recs||[]).filter(e=>e.key !== key);
+  mnDirty(); mnRenderSessKeepScroll();
+}
+async function mnAuSkip(id, d){ const au = document.getElementById(id); if(au){ au.currentTime = Math.max(0, (au.currentTime||0) + d); } }
+function mnAuSpeed(id, btnId){
+  const au = document.getElementById(id), b = document.getElementById(btnId); if(!au) return;
+  const steps = [1, 1.25, 1.5, 0.75], next = steps[(steps.indexOf(au.playbackRate) + 1) % steps.length] || 1;
+  au.playbackRate = next; if(b) b.textContent = next + '×';
+}
+// fetch a recording (Drive copy if needed) into an <audio> element
+async function mnLoadAudio(e, audioId, progId){
+  const au = document.getElementById(audioId); if(!e || !au) return null;
+  if(!MN_REC_URL[e.key]){
+    const prog = document.getElementById(progId); if(prog) prog.textContent = 'Memuat turun rakaman dari Drive…';
+    const r = await apiGet('getMinitFigure', { id: e.id });
+    if(prog) prog.textContent = '';
+    if(!r.success){ alert('Rakaman tidak dapat dimuat turun: ' + (r.message || '')); return null; }
+    MN_REC_URL[e.key] = URL.createObjectURL(new Blob([mnB64ToBytes(r.data.base64)], { type: e.mime.split(';')[0] }));
+  }
+  if(au.dataset.key !== e.key){
+    au.src = MN_REC_URL[e.key]; au.dataset.key = e.key;
+    await new Promise(res=>{
+      const done = ()=>{ au.removeEventListener('durationchange', chk); res(); };
+      const chk = ()=>{ if(isFinite(au.duration)){ try{ au.currentTime = 0; }catch(x){} done(); } };
+      au.addEventListener('loadedmetadata', ()=>{ if(isFinite(au.duration)) return done(); au.addEventListener('durationchange', chk); try{ au.currentTime = 1e7; }catch(x){ done(); } }, { once: true });
+      setTimeout(done, 4000);
+      au.load();
+    });
+  }
+  return au;
+}
+// whole-meeting recording: where this session starts, with a player
+function mnMeetRecHtml(i){
+  const it = MN.data.items[i], recs = MN.data.recordings || [];
+  const marks = it.marks || {};
+  if(MN_REC.rec && MN_REC.mode === 'session') return '';
+  if(MN_REC.rec){
+    const t = marks[MN_REC.key];
+    return `<section class="mn-block mn-rec-sess"><div class="mn-block-head"><h2>🎙 Rakaman</h2></div>
+      <div class="mn-help" style="margin:0 0 8px;">${t != null ? `Sesi ini ditanda pada <strong>${mnFmtTime(t)}</strong> dalam rakaman.` : 'Sesi ini belum ditanda.'}</div>
+      <button class="btn secondary small" onclick="mnRecMark(${i}, true);mnRenderSessKeepScroll();showToast('📍 Masa sesi ditanda: ' + mnFmtTime(mnRecElapsed()), 'info')">📍 Tanda mula sesi = sekarang</button></section>`;
+  }
+  const usable = recs.map((e, k)=>({ e, k })).filter(x=>x.e.id || MN_REC_URL[x.e.key]);
+  if(!usable.length) return '';
+  const sel = Math.min(MN_REC_SEL, usable.length - 1), cur = usable[sel].e;
+  const start = marks[cur.key];
+  return `<section class="mn-block mn-rec-sess"><div class="mn-block-head"><h2>🎧 Rakaman seluruh mesyuarat</h2></div>
+    ${usable.length > 1 ? `<div class="seg mn-seg-sm" style="margin-bottom:8px;">${usable.map((x, j)=>`<button class="${j===sel?'active':''}" onclick="MN_REC_SEL=${j};mnRenderSessKeepScroll()">Rakaman ${x.k+1}</button>`).join('')}</div>` : ''}
+    <div class="mn-help" style="margin:0 0 8px;">${start != null ? `Sesi ini bermula pada <strong>${mnFmtTime(start)}</strong>.` : 'Masa sesi ini tidak ditanda — dengar dari awal, kemudian tekan 📍 bila jumpa.'}</div>
+    <audio id="recAudio" controls preload="none" style="width:100%;"></audio>
+    <div class="mn-rec-ctrl">
+      <button class="btn small" onclick="mnRecPlayFrom(${start != null ? start : 0})">▶ ${start != null ? 'Main dari mula sesi' : 'Main dari awal'}</button>
+      <button class="mn-iconbtn" onclick="mnRecSkip(-10)">⏪ 10s</button>
+      <button class="mn-iconbtn" onclick="mnRecSkip(10)">10s ⏩</button>
+      <button class="mn-iconbtn" id="recSpeed" onclick="mnRecSpeed()">1×</button>
+      <button class="mn-iconbtn" onclick="mnRecSetMark(${i})">📍 Tanda di sini</button>
+    </div>
+    <div id="recProg" class="mn-progress"></div></section>`;
+}
+let MN_REC_SEL = 0;
+function mnRecCurrent(){
+  const recs = (MN.data.recordings || []).filter(e=>e.id || MN_REC_URL[e.key]);
+  return recs[Math.min(MN_REC_SEL, recs.length - 1)];
+}
+async function mnRecLoad(){
+  return mnLoadAudio(mnRecCurrent(), 'recAudio', 'recProg');
+}
+async function mnRecLoadOld(){
+  const e = mnRecCurrent(), au = document.getElementById('recAudio'); if(!e || !au) return null;
+  if(!MN_REC_URL[e.key]){
+    const prog = document.getElementById('recProg'); if(prog) prog.textContent = 'Memuat turun rakaman dari Drive…';
+    const r = await apiGet('getMinitFigure', { id: e.id });
+    if(prog) prog.textContent = '';
+    if(!r.success){ alert('Rakaman tidak dapat dimuat turun: ' + (r.message || '')); return null; }
+    MN_REC_URL[e.key] = URL.createObjectURL(new Blob([mnB64ToBytes(r.data.base64)], { type: e.mime.split(';')[0] }));
+  }
+  if(au.dataset.key !== e.key){
+    au.src = MN_REC_URL[e.key]; au.dataset.key = e.key;
+    // recordings from Chrome have no length in the file; let the browser work it out so seeking works
+    await new Promise(res=>{
+      const done = ()=>{ au.removeEventListener('durationchange', chk); res(); };
+      const chk = ()=>{ if(isFinite(au.duration)){ try{ au.currentTime = 0; }catch(x){} done(); } };
+      au.addEventListener('loadedmetadata', ()=>{ if(isFinite(au.duration)) return done(); au.addEventListener('durationchange', chk); try{ au.currentTime = 1e7; }catch(x){ done(); } }, { once: true });
+      setTimeout(done, 4000);
+      au.load();
+    });
+  }
+  return au;
+}
+async function mnRecPlayFrom(t){
+  const au = await mnRecLoad(); if(!au) return;
+  const go = ()=>{ try{ au.currentTime = t; }catch(e){} au.play().catch(()=>{}); };
+  if(au.readyState >= 1) go(); else au.addEventListener('loadedmetadata', go, { once: true });
+}
+async function mnRecSkip(d){ const au = await mnRecLoad(); if(au){ au.currentTime = Math.max(0, (au.currentTime||0) + d); } }
+function mnRecSpeed(){
+  const au = document.getElementById('recAudio'), b = document.getElementById('recSpeed'); if(!au) return;
+  const steps = [1, 1.25, 1.5, 0.75], next = steps[(steps.indexOf(au.playbackRate) + 1) % steps.length] || 1;
+  au.playbackRate = next; b.textContent = next + '×';
+}
+function mnRecSetMark(i){
+  const au = document.getElementById('recAudio'), e = mnRecCurrent(); if(!au || !e) return;
+  const it = MN.data.items[i]; it.marks = it.marks || {}; it.marks[e.key] = Math.round(au.currentTime || 0);
+  mnDirty(); showToast('📍 Mula sesi ditanda pada ' + mnFmtTime(it.marks[e.key]), 'info');
+  const y = window.scrollY, t = au.currentTime, playing = !au.paused; mnRenderSessKeepScroll();
+  mnRecLoad().then(a=>{ if(a){ a.currentTime = t; if(playing) a.play().catch(()=>{}); } }); window.scrollTo(0, y);
+}
+
 /* ---------- 🎤 voice → notes (speech recognition built into Chrome / Android / Safari) ----------
    Speech is turned into text by the browser's own service (Google for Chrome). Spoken
    "titik", "koma", "baris baru" become punctuation. Text goes in at the cursor. */
@@ -4134,6 +4455,11 @@ function mnMicTidy(t){
   if(x && !/[.!?:,\n]$/.test(x)) x += '.';
   return x;
 }
+// switching BM ⇄ EN while recording takes effect from the next sentence
+function mnMicLang(v){
+  MN_MIC.lang = v;
+  if(MN_MIC.on){ const old = MN_MIC.rec; MN_MIC.rec = null; MN_MIC.on = false; if(old){ try{ old.stop(); }catch(e){} } setTimeout(()=>mnMicStart(), 250); showToast('Bahasa rakaman: ' + (v === 'ms-MY' ? 'Bahasa Melayu' : 'English'), 'info'); }
+}
 function mnMicToggle(){ MN_MIC.on ? mnMicStop() : mnMicStart(); }
 function mnMicStart(){
   if(!mnMicSupported()){ alert('Rakaman suara tidak disokong dalam pelayar ini. Guna Google Chrome (komputer/Android) atau Safari (iPhone).'); return; }
@@ -4141,23 +4467,32 @@ function mnMicStart(){
   const rec = new SR();
   rec.lang = (document.getElementById('micLang') || {}).value || MN_MIC.lang;
   MN_MIC.lang = rec.lang;
-  rec.continuous = true; rec.interimResults = true;
+  // One utterance at a time: Android Chrome/Brave repeat earlier words in every result when
+  // listening continuously ("Obrick. Obrick yang. Obrick yang berlaku."), so the text of each
+  // utterance is collected and written ONCE when it ends, then listening starts again.
+  rec.continuous = false; rec.interimResults = true;
+  MN_MIC.pending = '';
   rec.onresult = e=>{
-    let interim = '';
-    for(let i = e.resultIndex; i < e.results.length; i++){
-      const r = e.results[i];
-      if(r.isFinal){ const t = mnMicTidy(r[0].transcript); if(t) mnInsertText(t); }
-      else interim += r[0].transcript;
-    }
+    const all = [];
+    for(let i = 0; i < e.results.length; i++){ const t = String(e.results[i][0].transcript || '').trim(); if(t) all.push(t); }
+    // drop pieces that are just the start of a later, longer piece
+    const keep = all.filter((t, k)=>!all.slice(k+1).some(u=>u.toLowerCase().startsWith(t.toLowerCase())));
+    const uniq = keep.filter((t, k)=>keep.indexOf(t) === k);
+    MN_MIC.pending = uniq.join(' ');
     const el = document.getElementById('micText');
-    if(el) el.innerHTML = interim ? '<i>' + mnEsc(interim) + '…</i>' : 'Sedang mendengar…';
+    if(el) el.innerHTML = MN_MIC.pending ? '<i>' + mnEsc(MN_MIC.pending) + '…</i>' : 'Sedang mendengar…';
   };
   rec.onerror = e=>{
     if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ mnMicStop(); alert('Kebenaran mikrofon ditolak. Benarkan mikrofon untuk laman ini (ikon 🔒 di sebelah alamat web), kemudian cuba lagi.'); }
     else if(e.error === 'network'){ mnMicStop(); alert('Rakaman suara perlukan internet.'); }
   };
-  // the browser stops after a pause — keep listening until the user presses Berhenti
-  rec.onend = ()=>{ if(MN_MIC.on && MN_MIC.rec === rec){ try{ rec.start(); }catch(e){ mnMicStop(); } } };
+  rec.onend = ()=>{
+    const t = mnMicTidy(MN_MIC.pending); MN_MIC.pending = '';
+    if(t && (!MN_MIC.last || MN_MIC.last !== t)){ mnInsertText(t); MN_MIC.last = t; }
+    const el = document.getElementById('micText'); if(el) el.textContent = 'Sedang mendengar…';
+    // keep listening until the user presses Berhenti
+    if(MN_MIC.on && MN_MIC.rec === rec){ setTimeout(()=>{ if(MN_MIC.on && MN_MIC.rec === rec){ try{ rec.start(); }catch(err){ mnMicStop(); } } }, 150); }
+  };
   MN_MIC.rec = rec; MN_MIC.on = true;
   try{ rec.start(); }catch(e){ MN_MIC.on = false; alert('Tidak dapat mula merakam: ' + e.message); return; }
   const ta = document.getElementById('ms_content'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -4166,7 +4501,8 @@ function mnMicStart(){
 function mnMicStop(){
   const rec = MN_MIC.rec;
   MN_MIC.on = false; MN_MIC.rec = null;
-  if(rec){ try{ rec.stop(); }catch(e){} }
+  if(rec){ try{ rec.stop(); }catch(e){} }   // onend still writes the last words
+  MN_MIC.last = '';
   mnMicUi();
 }
 function mnMicUi(){
@@ -4218,6 +4554,8 @@ function mnGenSentences(style){
       <button class="${style==='ringkas'?'active':''}" onclick="mnGenSentences('ringkas')">Ringkasan pembentangan</button>
     </div>
     ${style==='ringkas' ? `<div class="field"><label for="gs_who">Dibentangkan oleh</label><select id="gs_who" onchange="mnGenSentences('ringkas')"><option value="">(tiada nama)</option>${people.map(p=>`<option ${p===presenter?'selected':''}>${mnEsc(p)}</option>`).join('')}</select></div>` : ''}
+    ${(()=>{ const cr = mnCropsBySlide(it); const dg = pages.filter(p=>!(cr[p.num]||[]).length && minitIsDiagram(minitCleanLines(p.text))).map(p=>p.num);
+      return dg.length ? `<div class="mn-note" style="margin:0 0 10px;"><strong>Slaid ${dg.join(', ')} ialah peta/rajah/jadual.</strong> Isinya tidak dijadikan ayat (hanya diterangkan ringkas). Untuk masukkan rajah itu dalam minit, tekan <b>✂️ Pilih graf/gambar</b> pada slaid tersebut — pastikan tiada nama/inisial pesakit.</div>` : ''; })()}
     <div class="mn-help" style="margin:0 0 8px;">Teks Bahasa Inggeris diterjemah secara automatik (Google Translate) — semak dan betulkan sebelum masukkan. Baris yang kelihatan seperti nama/IC pesakit dibuang dan tidak dihantar.</div>
     <textarea id="gs_text" class="mn-content" style="min-height:260px;">${mnEsc(text)}</textarea>
     <div class="modal-actions">
