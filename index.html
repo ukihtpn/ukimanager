@@ -590,6 +590,33 @@
     .mn-sess-actions .mn-back, .mn-sess-actions #msPrev{flex:0 0 48px;}
     .mn-actions .mn-back{margin-right:0;}
   }
+
+  /* bigger minute preview */
+  .modal.preview{width:min(1100px,96vw);max-height:94vh;padding:18px 22px;background:#ece8e4;}
+  .modal.preview .pv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;position:sticky;top:-18px;background:#ece8e4;padding:6px 0;z-index:2;}
+  .pv-zoom{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;}
+  .pv-zoom button{border:none;background:none;font-weight:800;font-size:14px;padding:6px 10px;border-radius:7px;cursor:pointer;color:var(--maroon);font-family:inherit;}
+  .pv-zoom button:hover{background:#fdf3f5;}
+  .pv-zoom span{font-size:12px;color:var(--muted);min-width:40px;text-align:center;}
+  .modal.preview .mn-preview{background:#fff;padding:40px 48px;box-shadow:0 4px 18px rgba(0,0,0,.12);border-radius:4px;max-width:900px;margin:0 auto;font-size:15px;line-height:1.55;}
+  .modal.preview .mn-preview img{max-width:92%;cursor:zoom-in;}
+  .modal.preview .modal-actions{position:sticky;bottom:-18px;background:#ece8e4;padding:10px 0;margin-top:12px;}
+  @media (max-width:900px){ .modal.preview{width:100%;max-height:96vh;padding:12px;} .modal.preview .mn-preview{padding:18px 14px;} }
+  #pvImgFull{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;cursor:zoom-out;}
+  #pvImgFull.show{display:flex;}
+  #pvImgFull img{max-width:96vw;max-height:86vh;background:#fff;border-radius:4px;}
+  #pvImgFull span{color:#fff;font-size:12.5px;opacity:.8;}
+
+  /* voice notes */
+  .mn-notes-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .mn-notes-head h2{margin-bottom:6px !important;}
+  .mn-mic-wrap{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+  .mn-mic-lang{border:1px solid var(--line);border-radius:999px;padding:6px 8px;font-size:12.5px;font-family:inherit;background:#fff;}
+  .mn-mic{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;background:var(--maroon);color:#fff;}
+  .mn-mic.on{background:#c62828;animation:micPulse 1.4s ease-in-out infinite;}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.45);}50%{box-shadow:0 0 0 8px rgba(198,40,40,0);}}
+  .mn-mic-live{display:flex;gap:8px;align-items:center;background:#fdecec;border:1px solid #f2b8b5;color:#7a1414;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:8px;}
+  .mn-mic-dot{width:10px;height:10px;border-radius:50%;background:#c62828;flex-shrink:0;animation:micPulse 1.4s ease-in-out infinite;}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -1180,7 +1207,7 @@ function refreshCurrentView(view){
    MODAL HELPERS
    ============================================================ */
 function openModal(html){ document.getElementById('modalBody').innerHTML = html; document.getElementById('modalBg').classList.add('active'); }
-function closeModal(){ document.getElementById('modalBg').classList.remove('active'); document.getElementById('modalBody').classList.remove('wide'); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('active'); document.getElementById('modalBody').classList.remove('wide', 'preview'); }
 // short confirmation that appears at the bottom of the screen
 function showToast(msg, kind){
   let t = document.getElementById('appToast');
@@ -3666,12 +3693,14 @@ async function mnZoomDeck(num){
 
 /* ---------- session ---------- */
 function mnOpenSess(i){
+  mnMicStop();
   MN_SESS = i; MN_SLIDE_FILTER = 'all';
   mnShow('mnSessView');
   mnRenderSess();
 }
 function mnUnsaved(){ return /Belum/.test(document.getElementById('mnSaveState').textContent); }
 function mnCloseSess(){
+  mnMicStop();
   MN_SESS = -1; mnShow('mnHomeView'); mnRenderSessions(); mnRenderDeck();
   if(mnUnsaved()) mnSaveWithPopup();
 }
@@ -3786,7 +3815,12 @@ function mnRenderSess(){
     </section>
 
     <section class="mn-block">
-      <div class="mn-block-head"><h2>Nota perbincangan</h2></div>
+      <div class="mn-block-head mn-notes-head"><h2>Nota perbincangan</h2>
+        <div class="mn-mic-wrap">
+          <select id="micLang" class="mn-mic-lang" aria-label="Bahasa rakaman" onchange="MN_MIC.lang=this.value"><option value="ms-MY" ${MN_MIC.lang==='ms-MY'?'selected':''}>BM</option><option value="en-US" ${MN_MIC.lang==='en-US'?'selected':''}>EN</option></select>
+          <button type="button" class="mn-mic ${MN_MIC.on ? 'on' : ''}" id="micBtn" onclick="mnMicToggle()">${MN_MIC.on ? '⏹ Berhenti' : '🎤 Rakam suara'}</button>
+        </div></div>
+      <div class="mn-mic-live ${MN_MIC.on ? '' : 'hidden'}" id="micLive" aria-live="polite"><span class="mn-mic-dot"></span><span id="micText">Sedang mendengar… cakap dengan jelas. Sebut <b>"titik"</b>, <b>"koma"</b> atau <b>"baris baru"</b>.</span></div>
       <div class="mn-help" style="margin:-2px 0 8px;">Tekan ayat untuk masukkan di tempat kursor.</div>
       <div class="mn-phrases">${MN_PHRASES.map((p, k)=>`<button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertPhrase(${k})">${mnEsc(p.replace(/\*/g,'').replace(/\n- $/,'').trim())}</button>`).join('')}
         ${people.length ? `<button type="button" class="mn-phrase who" onmousedown="event.preventDefault()" onclick="mnPickPerson()">👤 Nama ahli…</button>` : ''}
@@ -4083,6 +4117,63 @@ async function mnCropSave(){
     showToast('✓ Gambar disimpan — akan masuk dalam minit sebagai Rajah');
   }catch(err){ btn.disabled = false; btn.textContent = 'Simpan bahagian dipilih'; alert('Gagal simpan gambar: ' + err.message); }
 }
+/* ---------- 🎤 voice → notes (speech recognition built into Chrome / Android / Safari) ----------
+   Speech is turned into text by the browser's own service (Google for Chrome). Spoken
+   "titik", "koma", "baris baru" become punctuation. Text goes in at the cursor. */
+const MN_MIC = { on: false, rec: null, lang: 'ms-MY' };
+function mnMicSupported(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function mnMicTidy(t){
+  let x = ' ' + String(t||'').trim() + ' ';
+  x = x.replace(/\s+(titik|full stop|period)\s+/gi, '. ')
+       .replace(/\s+(koma|comma)\s+/gi, ', ')
+       .replace(/\s+(titik bertindih|colon)\s+/gi, ': ')
+       .replace(/\s+(baris baru|perenggan baru|new line|new paragraph)\s+/gi, '\n')
+       .replace(/[ \t]+/g, ' ').replace(/ ([.,:])/g, '$1').trim();
+  // capital letter at the start of each sentence
+  x = x.replace(/(^|[.!?]\s+|\n)([a-z])/g, (m, a, b)=>a + b.toUpperCase());
+  if(x && !/[.!?:,\n]$/.test(x)) x += '.';
+  return x;
+}
+function mnMicToggle(){ MN_MIC.on ? mnMicStop() : mnMicStart(); }
+function mnMicStart(){
+  if(!mnMicSupported()){ alert('Rakaman suara tidak disokong dalam pelayar ini. Guna Google Chrome (komputer/Android) atau Safari (iPhone).'); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = (document.getElementById('micLang') || {}).value || MN_MIC.lang;
+  MN_MIC.lang = rec.lang;
+  rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e=>{
+    let interim = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const r = e.results[i];
+      if(r.isFinal){ const t = mnMicTidy(r[0].transcript); if(t) mnInsertText(t); }
+      else interim += r[0].transcript;
+    }
+    const el = document.getElementById('micText');
+    if(el) el.innerHTML = interim ? '<i>' + mnEsc(interim) + '…</i>' : 'Sedang mendengar…';
+  };
+  rec.onerror = e=>{
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ mnMicStop(); alert('Kebenaran mikrofon ditolak. Benarkan mikrofon untuk laman ini (ikon 🔒 di sebelah alamat web), kemudian cuba lagi.'); }
+    else if(e.error === 'network'){ mnMicStop(); alert('Rakaman suara perlukan internet.'); }
+  };
+  // the browser stops after a pause — keep listening until the user presses Berhenti
+  rec.onend = ()=>{ if(MN_MIC.on && MN_MIC.rec === rec){ try{ rec.start(); }catch(e){ mnMicStop(); } } };
+  MN_MIC.rec = rec; MN_MIC.on = true;
+  try{ rec.start(); }catch(e){ MN_MIC.on = false; alert('Tidak dapat mula merakam: ' + e.message); return; }
+  const ta = document.getElementById('ms_content'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  mnMicUi();
+}
+function mnMicStop(){
+  const rec = MN_MIC.rec;
+  MN_MIC.on = false; MN_MIC.rec = null;
+  if(rec){ try{ rec.stop(); }catch(e){} }
+  mnMicUi();
+}
+function mnMicUi(){
+  const b = document.getElementById('micBtn'), live = document.getElementById('micLive');
+  if(b){ b.classList.toggle('on', MN_MIC.on); b.textContent = MN_MIC.on ? '⏹ Berhenti' : '🎤 Rakam suara'; }
+  if(live) live.classList.toggle('hidden', !MN_MIC.on);
+}
 function mnClearOldFigs(){ MN.data.items[MN_SESS].figures = []; mnDirty(); mnRenderSess(); }
 function mnSetFigCaption(fi, v){ MN.data.items[MN_SESS].figures[fi].caption = v; mnDirty(); }
 function mnRemoveFig(fi){ MN.data.items[MN_SESS].figures.splice(fi, 1); mnDirty(); mnRenderSess(); }
@@ -4220,7 +4311,9 @@ function mnPreview(){
     ${it.attach_images ? (it.figures||[]).map(f=>`${f.thumb ? `<img src="${f.thumb}" alt="">` : ''}<div class="pv-cap">${mnEsc(f.caption)}</div>`).join('') : ''}
     ${(it.tindakan||'').trim() ? `<div class="pv-tindakan">Tindakan: ${mnEsc(it.tindakan)}</div>` : ''}</td></tr>`).join('');
   const dl = minitDateUpper(d.meeting_date, mnDateLabel(d.meeting_date));
-  openModal(`<h3>Pratonton minit</h3><div class="mn-preview">
+  openModal(`<div class="pv-bar"><h3 style="margin:0;">Pratonton minit</h3>
+      <div class="pv-zoom" role="group" aria-label="Saiz tulisan"><button onclick="mnPvZoom(-1)" aria-label="Kecilkan">A−</button><span id="pvZoomLbl">100%</span><button onclick="mnPvZoom(1)" aria-label="Besarkan">A+</button></div></div>
+    <div class="mn-preview" id="pvDoc">
     <div class="pv-title">${title}</div><br>
     <table class="pv-meta"><tr><td>TARIKH</td><td>: ${mnEsc(dl)}</td></tr><tr><td>MASA</td><td>: ${mnEsc(String(d.meeting_time||'').toUpperCase())}</td></tr><tr><td>TEMPAT</td><td>: ${mnEsc(String(d.venue||'').toUpperCase())}</td></tr></table>
     ${att ? `<p><strong>Senarai Kehadiran:</strong></p><table><tr><th>BIL</th><th style="text-align:center">NAMA</th><th style="text-align:center">JAWATAN</th></tr>${att}</table>` : '<p class="pv-warn">⚠ Senarai kehadiran belum dimasukkan.</p>'}
@@ -4229,6 +4322,22 @@ function mnPreview(){
     <table class="pv-sign"><tr><td>Disediakan oleh:<br><br><br>..............................<br>Nama: ${mnEsc(d.prepared_by)}<br>Jawatan: ${mnEsc(d.prepared_role)}</td>
       <td>Di Semak &amp; Disahkan oleh:<br><br><br>..............................<br>Nama: ${mnEsc(d.verified_by)}<br>Jawatan: ${mnEsc(d.verified_role)}</td></tr></table>
   </div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Tutup</button><button class="btn secondary" onclick="mnReviewNote()">Prompt semakan</button><button class="btn" onclick="closeModal();mnFinalize()">Jana minit (Word)</button></div>`);
+  document.getElementById('modalBody').classList.add('preview');
+  mnPvZoom(0);
+  // tap a picture to see it full size
+  document.querySelectorAll('#pvDoc img').forEach(im=>{ im.onclick = ()=>mnPvImage(im.src); });
+}
+let MN_PV_ZOOM = 1;
+function mnPvZoom(step){
+  MN_PV_ZOOM = Math.min(1.6, Math.max(0.8, Math.round((MN_PV_ZOOM + step*0.1)*10)/10));
+  const doc = document.getElementById('pvDoc'); if(doc) doc.style.fontSize = (15*MN_PV_ZOOM) + 'px';
+  const l = document.getElementById('pvZoomLbl'); if(l) l.textContent = Math.round(MN_PV_ZOOM*100) + '%';
+}
+function mnPvImage(src){
+  let o = document.getElementById('pvImgFull');
+  if(!o){ o = document.createElement('div'); o.id = 'pvImgFull'; o.onclick = ()=>o.classList.remove('show'); document.body.appendChild(o); }
+  o.innerHTML = `<img src="${src}" alt=""><span>Tekan di mana-mana untuk tutup</span>`;
+  o.classList.add('show');
 }
 // After the Word file is made: reminder to check it, with a ready prompt for Claude.ai
 function mnReviewPrompt(){
