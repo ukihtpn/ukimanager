@@ -2748,8 +2748,11 @@ function minitSentencesFromSlides(item, pages, opts){
           if(first){ sen = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(sen); first = false; }
           out.push(minitSentence(sen));
         } else {
-          let head = isDef ? lab + ' adalah seperti berikut:' : lab + ':';
-          if(first){ head = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(head); first = false; }
+          // a known topic (latar belakang, audit, kawalan…) gets its usual opening sentence
+          const topic = isDef ? '' : (MINIT_TOPICS.find(([re])=>re.test(lab) || re.test(b.label)) || [])[1];
+          let head = isDef ? lab + ' adalah seperti berikut:' : (topic || lab + ':');
+          if(first && !topic){ head = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(head); }
+          first = false;
           out.push(head);
           lines.forEach(l=>out.push('- ' + minitSentence(l)));
         }
@@ -3508,10 +3511,13 @@ async function mnDoBulkGen(){
   const pick = Array.from(document.querySelectorAll('.bg_cb')).filter(c=>c.checked).map(c=>+c.value);
   const allPages = pick.flatMap(i=>mnTickedPages(MN.data.items[i]).filter(p=>p.text && p.text.trim()));
   const need = minitTranslatables(allPages).filter(l=>!MN_TR[l]);
-  if(need.length){
-    openModal(`<h3>Jana ayat untuk semua sesi</h3><div class="mn-progress">Menterjemah ${need.length} baris Bahasa Inggeris ke Bahasa Melayu…</div>`);
-    try{ await mnTranslate(need); }catch(err){ closeModal(); alert('Terjemahan gagal: ' + err.message); return; }
-  }
+  openModal(`<h3>Jana ayat untuk semua sesi</h3><div class="mn-progress" id="bgProg">Menyediakan…</div>`);
+  const say = t=>{ const el = document.getElementById('bgProg'); if(el) el.textContent = t; };
+  try{
+    const pics = await mnAutoCropItems(pick.map(i=>MN.data.items[i]), say);
+    if(pics) showToast('✓ ' + pics + ' graf/gambar diambil dari slaid');
+    if(need.length){ say('Menterjemah ' + need.length + ' baris Bahasa Inggeris ke Bahasa Melayu…'); await mnTranslate(need); }
+  }catch(err){ closeModal(); alert('Gagal: ' + err.message); return; }
   closeModal();
   let done = 0;
   pick.forEach(i=>{
@@ -3683,11 +3689,27 @@ function mnRenderSess(){
 }
 function mnSlideFilter(f){ MN_SLIDE_FILTER = f; mnRenderSessKeepScroll(); }
 function mnRenderSessKeepScroll(){ const y = window.scrollY; mnRenderSess(); window.scrollTo(0, y); }
-function mnTickSlide(num){
+async function mnTickSlide(num){
   const it = MN.data.items[MN_SESS];
   const k = it.slides.indexOf(num);
-  if(k >= 0) it.slides.splice(k, 1); else { it.slides.push(num); it.slides.sort((a,b)=>a-b); }
+  if(k >= 0){
+    it.slides.splice(k, 1);
+    const gone = (it.crops||[]).filter(c=>c.slide === num).map(c=>'[[rajah:' + c.id + ']]');
+    if(gone.length){ it.crops = it.crops.filter(c=>c.slide !== num); it.content = String(it.content||'').split('\n').filter(l=>gone.indexOf(l.trim()) < 0).join('\n'); }
+    mnDirty(); mnRenderSessKeepScroll(); return;
+  }
+  it.slides.push(num); it.slides.sort((a,b)=>a-b);
   mnDirty(); mnRenderSessKeepScroll();
+  const p = mnDeck().pages.find(x=>x.num === num);
+  if(!p || !MN_DECK_DOCS[p.file]) return;
+  const say = t=>{ const el = document.getElementById('msProg'); if(el) el.textContent = t; };
+  say('Mencari graf/gambar dalam slaid ' + num + '…');
+  try{
+    const n = await mnAutoCrop(it, num);
+    say('');
+    if(MN.data.items[MN_SESS] === it){ mnDirty(); mnRenderSessKeepScroll(); }
+    showToast(n ? '✓ ' + n + ' graf/gambar diambil dari slaid ' + num : 'Slaid ' + num + ': tiada gambar dikesan — tekan ✂️ untuk pilih graf sendiri', n ? 'ok' : 'info');
+  }catch(err){ say(''); showToast('✗ Gagal ambil gambar slaid ' + num + ': ' + err.message, 'err'); }
 }
 function mnTickSuggested(){
   const it = MN.data.items[MN_SESS], deck = mnDeck();
@@ -3781,9 +3803,15 @@ async function mnDetectImageBoxes(num, width){
         const xs = pts.map(q=>q[0]), ys = pts.map(q=>q[1]);
         const b = { x: Math.max(0, Math.min(...xs)), y: Math.max(0, Math.min(...ys)), x2: Math.min(vp.width, Math.max(...xs)), y2: Math.min(vp.height, Math.max(...ys)) };
         const area = (b.x2-b.x)*(b.y2-b.y) / (vp.width*vp.height);
-        if(area > 0.03 && area < 0.92) boxes.push({ x: b.x, y: b.y, w: b.x2-b.x, h: b.y2-b.y });
+        if(area > 0.03 && area < 0.92) boxes.push({ x: b.x, y: b.y, w: b.x2-b.x, h: b.y2-b.y, area });
       }
     });
+    // text written on top of an image means the image is a background/decoration, not a graph
+    try{
+      const tc = await page.getTextContent(), U = window.pdfjsLib.Util;
+      const pts = (tc.items||[]).filter(t=>String(t.str||'').trim()).map(t=>{ const m = U.transform(vp.transform, t.transform); return { x: m[4], y: m[5], n: String(t.str).trim().length }; });
+      boxes.forEach(b=>{ b.textInside = pts.filter(q=>q.x >= b.x && q.x <= b.x + b.w && q.y >= b.y && q.y <= b.y + b.h).reduce((a, q)=>a + q.n, 0); });
+    }catch(e){ boxes.forEach(b=>{ b.textInside = 0; }); }
     return boxes.slice(0, 6);
   }catch(e){ console.warn(e); return []; }
 }
@@ -3821,26 +3849,70 @@ function mnCropPick(k){
   document.getElementById('cropSave').disabled = false;
 }
 function mnCropWhole(){ MN_CROP.sel = { x: 0, y: 0, w: 1, h: 1 }; mnCropSave(); }
+// cut sel (fractions 0–1) out of a rendered slide, store in Drive, add to the session's pictures
+async function mnStoreCrop(it, num, img, sel, caption){
+  const im = new Image(); await new Promise((res, rej)=>{ im.onload = res; im.onerror = rej; im.src = img.dataUrl; });
+  const sx = Math.round(sel.x*im.width), sy = Math.round(sel.y*im.height), sw = Math.max(1, Math.round(sel.w*im.width)), sh = Math.max(1, Math.round(sel.h*im.height));
+  const k = Math.min(1, 1400 / sw);
+  const cv = document.createElement('canvas'); cv.width = Math.round(sw*k); cv.height = Math.round(sh*k);
+  const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  const dataUrl = cv.toDataURL('image/jpeg', 0.88), b64 = dataUrl.split(',')[1];
+  const up = await apiPost('uploadMinitFigure', { base64: b64, filename: 'rajah_' + Date.now() + '.jpg' });
+  if(!up.success) throw new Error(up.message || 'gagal simpan ke Drive');
+  MN_FIG_CACHE[up.data.id] = b64;
+  const thumb = (await mnScaleImage(dataUrl, 360, 0.75)).dataUrl;
+  it.crops = it.crops || [];
+  const c = { id: up.data.id, slide: num, thumb, width: cv.width, height: cv.height, caption: caption || '' };
+  it.crops.push(c);
+  return c;
+}
+function mnSlideCaption(num){
+  const p = (mnDeck().pages.find(x=>x.num === num) || {});
+  const t = minitSlideTitle(minitCleanLines(p.text || ''));
+  return t ? minitLabelText(MN_TR[t] || t) : 'Slaid ' + num;
+}
+// Ticked slide → take its graph/picture automatically (pictures with text written over
+// them are slide backgrounds and are skipped). Returns how many were taken.
+async function mnAutoCrop(it, num){
+  if((it.crops||[]).some(c=>c.slide === num)) return 0;
+  const p = mnDeck() && mnDeck().pages.find(x=>x.num === num);
+  if(!p || !MN_DECK_DOCS[p.file] || MN_DECK_DOCS[p.file].kind !== 'pdf') return 0;
+  const img = await mnSlideImage(num, 1600); if(!img) return 0;
+  const boxes = (await mnDetectImageBoxes(num, img.width)).filter(b=>b.area >= 0.06 && (b.textInside||0) < 25)
+    .sort((a,b)=>b.area - a.area);
+  // drop boxes inside a bigger one already taken
+  const take = [];
+  boxes.forEach(b=>{ if(take.length < 3 && !take.some(t=>b.x >= t.x-2 && b.y >= t.y-2 && b.x+b.w <= t.x+t.w+2 && b.y+b.h <= t.y+t.h+2)) take.push(b); });
+  let n = 0;
+  for(const b of take){
+    const pad = 4;
+    const sel = { x: Math.max(0, (b.x-pad)/img.width), y: Math.max(0, (b.y-pad)/img.height), w: Math.min(1, (b.w+2*pad)/img.width), h: Math.min(1, (b.h+2*pad)/img.height) };
+    await mnStoreCrop(it, num, img, sel, mnSlideCaption(num) + (take.length > 1 ? ' (' + (n+1) + ')' : ''));
+    n++;
+  }
+  return n;
+}
+// run auto-crop for every ticked slide of the given sessions that has no picture yet
+async function mnAutoCropItems(items, say){
+  let n = 0;
+  for(const it of items){
+    for(const num of (it.slides||[])){
+      if((it.crops||[]).some(c=>c.slide === num)) continue;
+      say && say('Mencari graf/gambar dalam slaid ' + num + '…');
+      try{ n += await mnAutoCrop(it, num); }catch(e){ console.warn(e); }
+    }
+  }
+  return n;
+}
 async function mnCropSave(){
   const c = MN_CROP; if(!c || !c.sel) return;
   const btn = document.getElementById('cropSave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
   try{
-    const im = new Image(); await new Promise((res, rej)=>{ im.onload = res; im.onerror = rej; im.src = c.img.dataUrl; });
-    const sx = Math.round(c.sel.x*im.width), sy = Math.round(c.sel.y*im.height), sw = Math.round(c.sel.w*im.width), sh = Math.round(c.sel.h*im.height);
-    const k = Math.min(1, 1400 / sw);
-    const cv = document.createElement('canvas'); cv.width = Math.round(sw*k); cv.height = Math.round(sh*k);
-    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
-    const dataUrl = cv.toDataURL('image/jpeg', 0.88), b64 = dataUrl.split(',')[1];
-    const up = await apiPost('uploadMinitFigure', { base64: b64, filename: 'rajah_' + Date.now() + '.jpg' });
-    if(!up.success) throw new Error(up.message || 'gagal simpan ke Drive');
-    MN_FIG_CACHE[up.data.id] = b64;
-    const thumb = (await mnScaleImage(dataUrl, 360, 0.75)).dataUrl;
     const it = MN.data.items[MN_SESS];
-    it.crops = it.crops || [];
-    it.crops.push({ id: up.data.id, slide: c.num, thumb, width: cv.width, height: cv.height, caption: document.getElementById('crop_cap').value.trim() });
+    const cr = await mnStoreCrop(it, c.num, c.img, c.sel, document.getElementById('crop_cap').value.trim());
     // place the picture at the end of the notes; the user can move the marker line
-    it.content = String(it.content||'').replace(/\s+$/,'') + '\n[[rajah:' + up.data.id + ']]';
+    it.content = String(it.content||'').replace(/\s+$/,'') + '\n[[rajah:' + cr.id + ']]';
     closeModal(); mnDirty(); mnRenderSessKeepScroll();
     showToast('✓ Gambar disimpan — akan masuk dalam minit sebagai Rajah');
   }catch(err){ btn.disabled = false; btn.textContent = 'Simpan bahagian dipilih'; alert('Gagal simpan gambar: ' + err.message); }
@@ -3866,9 +3938,19 @@ function mnGenSentences(style){
   const presenter = (document.getElementById('gs_who') || {}).value || mnGenSentences._who || '';
   mnGenSentences._who = presenter;
   const need = minitTranslatables(pages).filter(l=>!MN_TR[l]);
-  if(need.length){
-    openModal(`<h3>Ayat dari ${pages.length} slaid</h3><div class="mn-progress">Menterjemah ${need.length} baris Bahasa Inggeris ke Bahasa Melayu…</div>`);
-    mnTranslate(need).then(()=>mnGenSentences(style)).catch(err=>{ closeModal(); alert('Terjemahan gagal: ' + err.message); });
+  const missingPics = (it.slides||[]).some(n=>!(it.crops||[]).some(c=>c.slide === n) && !(mnGenSentences._tried||{})[MN_SESS + ':' + n]);
+  if(need.length || missingPics){
+    openModal(`<h3>Ayat dari ${pages.length} slaid</h3><div class="mn-progress" id="gsProg">Menyediakan…</div>`);
+    const say = t=>{ const el = document.getElementById('gsProg'); if(el) el.textContent = t; };
+    (async ()=>{
+      if(missingPics){
+        mnGenSentences._tried = mnGenSentences._tried || {};
+        (it.slides||[]).forEach(n=>{ mnGenSentences._tried[MN_SESS + ':' + n] = true; });
+        await mnAutoCropItems([it], say);
+      }
+      if(need.length){ say('Menterjemah ' + need.length + ' baris Bahasa Inggeris ke Bahasa Melayu…'); await mnTranslate(need); }
+      mnDirty(); mnGenSentences(style);
+    })().catch(err=>{ closeModal(); alert('Gagal: ' + err.message); });
     return;
   }
   const text = minitSentencesFromSlides(it, pages, { style, presenter, tr: MN_TR, crops: mnCropsBySlide(it) });
