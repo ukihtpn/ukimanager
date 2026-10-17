@@ -49,7 +49,7 @@
   .logo-splash{width:104px;height:104px;object-fit:cover;border-radius:24px;display:block;margin:0 auto 14px;box-shadow:0 6px 16px rgba(122,0,25,.18);}
 
   /* LAYOUT */
-  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
   .topbar{display:none;}
   .sidebar{background:var(--maroon);color:#fff;padding:22px 14px;display:flex;flex-direction:column;gap:2px;}
   .brand-row{display:flex;align-items:center;gap:10px;margin-bottom:2px;}
@@ -60,7 +60,7 @@
   .navbtn{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:6px;color:#f4e6ea;text-decoration:none;font-size:13.5px;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;}
   .navbtn:hover{background:rgba(255,255,255,.08);}
   .navbtn.active{background:#fff;color:var(--maroon);font-weight:600;}
-  .main{padding:24px 30px;max-width:1200px;min-width:0;}/* min-width:0 stops wide children (slide strips) from stretching the grid column */
+  .main{padding:24px 30px;min-width:0;width:100%;box-sizing:border-box;}/* min-width:0 stops wide children (slide strips) from stretching the grid column */
   .sidebar-overlay{display:none;}
   .userbar{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.15);font-size:12px;color:#f0dde2;}
   .userbar button{background:none;border:none;color:#fff;text-decoration:underline;font-size:11.5px;cursor:pointer;padding:0;margin-top:3px;}
@@ -142,11 +142,13 @@
   .ob-grid .cell:hover{background:#fff7ec;}
   .ob-grid .cell.filled.Outbreak{background:#f8443d;color:#fff;font-weight:700;}
   .ob-grid .cell.filled.OMT{background:#ffd479;color:#7a4b00;font-weight:700;}
+  .ob-grid .cell small{display:block;font-size:9px;opacity:.85;}
+  .ob-grid .cell.filled{flex-direction:column;}
   .link-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
   .link-row a{color:var(--maroon);font-weight:600;}
 
   /* MINIT MESYUARAT */
-  #view-minit{max-width:760px;}
+  #view-minit{max-width:none;}
   .mn-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;}
   .mn-card-title{font-weight:700;font-size:14.5px;line-height:1.35;}
   .mn-card-meta{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
@@ -197,7 +199,7 @@
   .mn-chev{color:var(--muted);font-size:20px;flex-shrink:0;}
   .mn-sign summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .mn-sign summary::-webkit-details-marker{display:none;}
-  .mn-sign summary h2{margin:0;font-size:15.5px;}
+  .mn-sign summary h2{margin:0;font-size:15.5px;display:flex;align-items:center;gap:8px;}
   .mn-sign summary span{font-size:12.5px;color:var(--muted);text-align:right;}
   .mn-actions{position:sticky;bottom:0;z-index:20;background:rgba(250,248,246,.96);backdrop-filter:blur(4px);border-top:1px solid var(--line);padding:10px 0;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;}
   .mn-sess-title{width:100%;font-weight:800;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;}
@@ -235,7 +237,7 @@
     .mn-actions .btn{flex:1;}
   }
   /* ATTENDANCE */
-  #view-attendance{max-width:720px;}
+  #view-attendance{max-width:none;}
   .at-picker{display:flex;gap:8px;margin:6px 0 14px;}
   .at-picker select{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;font-family:inherit;color:var(--ink);}
   .at-iconbtn{width:42px;height:42px;flex-shrink:0;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--maroon);font-size:18px;font-weight:700;cursor:pointer;}
@@ -453,6 +455,102 @@
   .dash-unit{font-size:12.5px;opacity:.85;line-height:1.35;}
   .dash-date{font-size:12px;font-weight:600;color:var(--yellow);margin-top:2px;}
   @media (max-width:420px){ .dash-logo{width:56px;height:56px;border-radius:14px;} .dash-hello{font-size:16.5px;} }
+
+  /* TOAST */
+  #appToast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom, 0px));transform:translate(-50%,16px);max-width:min(92vw,440px);background:#1d6b31;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;line-height:1.35;box-shadow:0 10px 28px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:150;text-align:center;}
+  #appToast.err{background:#b3261e;}
+  #appToast.info{background:#1c1a19;}
+  #appToast.show{opacity:1;transform:translate(-50%,0);}
+  @media (min-width:901px){ #appToast{bottom:28px;} }
+  @media (max-width:900px){ #appToast{bottom:auto;top:calc(72px + env(safe-area-inset-top, 0px));transform:translate(-50%,-16px);} #appToast.show{transform:translate(-50%,0);} }
+
+  /* MINIT v3 — steps, one-time slides, slide picker, phrases */
+  .mn-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--maroon);color:#fff;font-size:12px;font-weight:800;margin-right:2px;flex-shrink:0;}
+  .mn-deck-files{display:flex;flex-wrap:wrap;gap:6px;}
+  .mn-deck-files em{font-style:normal;color:var(--muted);font-size:11px;}
+  .mn-thumb-ph{width:140px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#f4f1ee;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-weight:700;}
+  .mn-slidebar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .mn-seg-sm button{padding:6px 10px;font-size:12px;}
+  .mn-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .mn-pick-card{position:relative;border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:#fff;outline:none;}
+  .mn-pick-card:focus-visible{box-shadow:0 0 0 3px var(--yellow);}
+  .mn-pick-card img,.mn-pick-card .mn-thumb-ph{width:100%;display:block;border:none;border-radius:0;}
+  .mn-pick-card.on{border-color:var(--maroon);box-shadow:0 0 0 1px var(--maroon);}
+  .mn-pick-box{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.95);border:2px solid #9b918a;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:15px;}
+  .mn-pick-card.on .mn-pick-box{background:var(--maroon);border-color:var(--maroon);}
+  .mn-pick-cap{display:block;padding:5px 7px;font-size:11.5px;font-weight:600;color:var(--ink);background:#fbf9f7;border-top:1px solid var(--line);}
+  .mn-pick-cap i{font-style:normal;color:var(--muted);font-weight:500;}
+  .mn-sug{background:#fff3d1;color:#7a5200;border-radius:6px;padding:0 5px;font-size:10.5px;}
+  .mn-pick-zoom{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:7px;border:none;background:rgba(28,26,25,.6);color:#fff;font-size:14px;cursor:pointer;}
+  .mn-check{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.4;}
+  .mn-check input{margin-top:2px;accent-color:var(--maroon);}
+  .mn-phrases{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:thin;}
+  @media (min-width:901px){ .mn-phrases{flex-wrap:wrap;overflow:visible;} }
+  .mn-phrase{flex:0 0 auto;border:1px solid #e3c9cf;background:#fdf3f5;color:var(--maroon);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .mn-phrase:hover{background:var(--maroon);color:#fff;}
+  .mn-phrase.who{background:#eef4ff;border-color:#c9d8f5;color:#1d4e9e;}
+  .mn-person-list{display:flex;flex-direction:column;gap:6px;max-height:45vh;overflow:auto;}
+  .mn-person-list .mn-choice{padding:10px 14px;}
+  .mn-slide-text{white-space:pre-wrap;font-size:12px;background:#f7f4f1;border-radius:8px;padding:10px;max-height:220px;overflow:auto;}
+  .mn-preview{font-family:Arial,Helvetica,sans-serif;font-size:13px;}
+  .mn-preview .pv-meta,.mn-preview .pv-meta td{border:none;padding:1px 6px 1px 0;font-weight:700;}
+  .mn-preview .pv-sign,.mn-preview .pv-sign td{border:none;}
+  .mn-preview .pv-tindakan{text-align:left;}
+  .mn-preview .pv-sub{margin:10px 0 4px;}
+  .mn-preview .pv-warn{color:var(--red);font-weight:700;}
+  #mnSaveState,#mnSaveState2{font-weight:600;}
+  .mn-note{background:#fff7e6;border:1px solid #f2c46b;border-left:5px solid #e0a100;border-radius:10px;padding:11px 13px;font-size:13.5px;line-height:1.5;color:#4a3500;}
+  .mn-note strong{display:block;margin-bottom:3px;color:#7a0019;}
+
+  /* OUTBREAK reminder cards (6 weeks from last positive case) */
+  .ob-rem-head{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:2px 0 8px;}
+  .ob-rem-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:18px;}
+  .ob-rem{--c:#3b4652;--bg:#fff;--bar:#8a96a3;background:var(--bg);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:14px 14px 12px;box-shadow:0 2px 10px rgba(60,20,20,.05);}
+  .ob-rem.soon{--c:#c78a00;--bg:#fff8e6;--bar:#e0a100;border-color:#f2d27b;}
+  .ob-rem.due{--c:var(--red);--bg:#fdecec;--bar:var(--red);border-color:#f2b8b5;}
+  .ob-rem-top{display:flex;gap:12px;align-items:flex-start;}
+  .ob-rem-ico{font-size:22px;line-height:1;flex-shrink:0;margin-top:2px;}
+  .ob-rem-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ob-rem-txt strong{font-size:15px;}
+  .ob-rem-txt em{font-style:normal;font-weight:800;color:var(--c);font-size:13.5px;line-height:1.3;}
+  .ob-rem-txt small{font-size:12.5px;color:var(--ink);opacity:.8;line-height:1.35;}
+  .ob-rem-day{text-align:right;flex-shrink:0;line-height:1.1;}
+  .ob-rem-day b{display:block;font-size:26px;color:var(--c);font-variant-numeric:tabular-nums;}
+  .ob-rem-day span{font-size:11px;color:var(--muted);font-weight:600;}
+  .ob-rem-bar{position:relative;height:8px;background:rgba(0,0,0,.08);border-radius:99px;margin:12px 0 8px;overflow:visible;}
+  .ob-rem-bar i{display:block;height:100%;background:var(--bar);border-radius:99px;}
+  .ob-rem-bar span{position:absolute;top:-3px;width:2px;height:14px;background:#7a5200;opacity:.45;}
+  .ob-rem-meta{font-size:12px;color:var(--muted);}
+  .ob-rem-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+
+  /* FULL-WIDTH DESKTOP LAYOUT */
+  @media (min-width:901px){
+    .sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;box-sizing:border-box;}
+    .main{padding:24px 36px 40px;}
+  }
+  @media (min-width:1280px){
+    /* dashboard: month grid and the day's events side by side */
+    .app-cal{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:0 18px;align-items:start;}
+    .app-cal > .cal-top, .app-cal > .cal-note{grid-column:1 / -1;}
+    .app-cal > .cal-card:only-of-type{grid-column:1 / -1;}
+    .app-cal .cal-dayp{max-height:620px;overflow-y:auto;}
+    /* attendance: event + summary on the left, the name list on the right */
+    #view-attendance .at-grid-wide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:20px;align-items:start;}
+    /* minit: session list and slide strips use the extra width */
+    .mn-pick{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));}
+    .tk-panel, #view-todo .tk-sum{max-width:none;}
+    .tk-add{flex-direction:row;align-items:stretch;}
+    .tk-add input#newTaskInput{flex:1;}
+    .tk-add-row{flex:0 0 auto;}
+    .tk-date{min-width:280px;flex:0 0 auto;}
+  }
+
+  /* sidebar icons (desktop) */
+  .nav-ico{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--yellow);}
+  .nav-ico svg{width:21px;height:21px;}
+  .navbtn{font-size:14px;padding:11px 12px;border-radius:10px;font-weight:500;}
+  .navbtn.active .nav-ico{color:var(--maroon);}
+  .navbtn.active{box-shadow:0 2px 8px rgba(0,0,0,.15);}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -538,12 +636,12 @@
       <div class="brand">Infection Control Manager<small>Unit Kawalan Infeksi, HTPN</small></div>
     </div>
     <div class="navsep"></div>
-    <button class="navbtn active" data-view="dashboard">Dashboard</button>
-    <button class="navbtn" data-view="todo">Things To Do</button>
-    <button class="navbtn" data-view="attendance">Attendance</button>
-    <button class="navbtn" data-view="memo">No. Memo / Bilangan</button>
-    <button class="navbtn" data-view="minit">Minit Mesyuarat</button>
-    <button class="navbtn" data-view="outbreak">Monitor Outbreak</button>
+    <button class="navbtn active" data-view="dashboard"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span>Dashboard</button>
+    <button class="navbtn" data-view="todo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 2.8 2.8L16.2 9"/></svg></span>Things To Do</button>
+    <button class="navbtn" data-view="attendance"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2.2.6 3.6 2.4 4 5.2"/></svg></span>Attendance</button>
+    <button class="navbtn" data-view="memo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>No. Memo / Bilangan</button>
+    <button class="navbtn" data-view="minit"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/></svg></span>Minit Mesyuarat</button>
+    <button class="navbtn" data-view="outbreak"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#2e7d32" stroke-width="1.6" stroke-linecap="round"><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></g><g fill="#2e7d32"><circle cx="12" cy="2.6" r="1.3"/><circle cx="12" cy="21.4" r="1.3"/><circle cx="2.6" cy="12" r="1.3"/><circle cx="21.4" cy="12" r="1.3"/><circle cx="5.3" cy="5.3" r="1.2"/><circle cx="18.7" cy="18.7" r="1.2"/><circle cx="5.3" cy="18.7" r="1.2"/><circle cx="18.7" cy="5.3" r="1.2"/></g><circle cx="12" cy="12" r="6.2" fill="#66bb6a" stroke="#2e7d32" stroke-width="1.4"/><circle cx="10" cy="10.4" r="1.4" fill="#2e7d32"/><circle cx="14.2" cy="12.6" r="1.1" fill="#2e7d32"/><circle cx="10.8" cy="14.4" r="0.9" fill="#2e7d32"/></svg></span>Monitor Outbreak</button>
     <div class="userbar" id="userbar"></div>
   </div>
 
@@ -622,14 +720,20 @@
         <button class="at-iconbtn" title="Program baru" aria-label="Program baru" onclick="openNewActivityModal()">＋</button>
       </div>
       <div class="at-rule">Kehadiran untuk perbincangan UKI sahaja. <button class="at-link" onclick="openAttendanceRules()">Tetapkan acara</button></div>
-      <div id="attEventCard" class="at-card at-event"></div>
-      <div id="attSummaryCard" class="at-card at-summary"></div>
-      <button class="btn at-confirm" id="attConfirmBtn" onclick="confirmMyAttendance()">✓ Confirm Attendance</button>
-      <div class="at-listhead">
-        <h2>Senarai Staff</h2>
-        <button class="at-link" onclick="openAddAttendanceModal()"><span class="at-ico" data-ico="adduser"></span>Add Staff</button>
+      <div class="at-grid-wide">
+        <div>
+          <div id="attEventCard" class="at-card at-event"></div>
+          <div id="attSummaryCard" class="at-card at-summary"></div>
+        </div>
+        <div>
+          <button class="btn at-confirm" id="attConfirmBtn" onclick="confirmMyAttendance()">✓ Confirm Attendance</button>
+          <div class="at-listhead">
+            <h2>Senarai Staff</h2>
+            <button class="at-link" onclick="openAddAttendanceModal()"><span class="at-ico" data-ico="adduser"></span>Add Staff</button>
+          </div>
+          <div id="attendanceList" class="at-card at-list"></div>
+        </div>
       </div>
-      <div id="attendanceList" class="at-card at-list"></div>
     </div>
 
     <!-- MEMO / BILANGAN -->
@@ -670,17 +774,25 @@
         <div class="mn-head" id="mnHead"></div>
 
         <section class="mn-block">
-          <div class="mn-block-head"><h2>Kehadiran <span class="mn-count" id="mnAttCount"></span></h2></div>
-          <div class="mn-row">
-            <span class="btn secondary small mn-filebtn">Upload senarai (PDF/gambar)<input type="file" accept="application/pdf,.pdf,image/*" onchange="mnUploadAttendance(this)"></span>
-            <button class="btn secondary small" onclick="mnImportAttendance()">Import dari Hadir</button>
-            <button class="btn secondary small" onclick="mnCopyAttendance()">Salin minit lepas</button>
-          </div>
+          <div class="mn-block-head"><h2><span class="mn-step">1</span>Senarai kehadiran <span class="mn-count" id="mnAttCount"></span></h2></div>
           <div id="mnAttPreview"></div>
+          <div class="mn-choices" id="mnAttChoices">
+            <label class="mn-choice mn-filebtn">
+              <span class="mn-choice-ico">📄</span>
+              <span class="mn-choice-txt"><strong>Upload senarai kehadiran</strong><small>PDF atau gambar borang kehadiran — app baca nama &amp; jawatan</small></span>
+              <input type="file" accept="application/pdf,.pdf,image/*" onchange="mnUploadAttendance(this)">
+            </label>
+          </div>
+          <div class="mn-more" id="mnAttMore">
+            <button class="at-link" onclick="mnImportAttendance()">Import dari tab Hadir</button>
+            <button class="at-link" onclick="mnCopyAttendance()">Salin dari minit lepas</button>
+            <button class="at-link" onclick="mnEditAttendance()">Taip manual</button>
+            <button class="at-link" onclick="mnEditAbsent()">Tidak hadir dengan maaf <span id="mnAbsCount"></span></button>
+          </div>
         </section>
 
         <section class="mn-block">
-          <div class="mn-block-head"><h2>Agenda &amp; sesi <span class="mn-count" id="mnSessCount"></span></h2></div>
+          <div class="mn-block-head"><h2><span class="mn-step">2</span>Agenda &amp; sesi <span class="mn-count" id="mnSessCount"></span></h2></div>
           <div id="mnAgendaStart" class="mn-choices">
             <label class="mn-choice mn-filebtn">
               <span class="mn-choice-ico">📷</span>
@@ -699,24 +811,29 @@
           <div id="mnSessList" class="mn-sess-list"></div>
           <div id="mnSessMore" class="mn-more">
             <button class="at-link" onclick="mnAddItem()">+ Tambah sesi</button>
-            <label class="at-link mn-filebtn" title="Satu PDF slaid untuk seluruh mesyuarat — app agihkan slaid ke setiap sesi">Satu PDF slaid untuk semua sesi<input type="file" accept="application/pdf,.pdf" onchange="mnDeckUpload(this)"></label>
             <button class="at-link" onclick="mnAgendaTypeModal(true)">Ganti agenda</button>
           </div>
+        </section>
+
+        <section class="mn-block">
+          <div class="mn-block-head"><h2><span class="mn-step">3</span>Slaid pembentangan <span class="mn-count" id="mnDeckCount"></span></h2></div>
+          <div class="mn-help">Upload <strong>sekali sahaja</strong> untuk seluruh mesyuarat. Kemudian dalam setiap sesi, tick slaid yang berkaitan — app jadikan isi slaid itu ayat minit.</div>
+          <div id="mnDeckBox"></div>
           <div id="mnDeckProgress" class="mn-progress"></div>
         </section>
 
         <details class="mn-block mn-sign">
-          <summary><h2>Tandatangan</h2><span id="mnSignSummary"></span></summary>
+          <summary><h2><span class="mn-step">4</span>Tandatangan</h2><span id="mnSignSummary"></span></summary>
           <div class="formgrid" style="margin-top:12px;">
             <div class="field"><label for="mn_pby">Disediakan oleh</label><input id="mn_pby" oninput="mnSet('prepared_by', this.value);mnRenderSignSummary()"></div>
             <div class="field"><label for="mn_prole">Jawatan</label><input id="mn_prole" oninput="mnSet('prepared_role', this.value)"></div>
-            <div class="field"><label for="mn_vby">Disahkan oleh</label><input id="mn_vby" oninput="mnSet('verified_by', this.value);mnRenderSignSummary()"></div>
+            <div class="field"><label for="mn_vby">Di semak &amp; disahkan oleh</label><input id="mn_vby" oninput="mnSet('verified_by', this.value);mnRenderSignSummary()"></div>
             <div class="field"><label for="mn_vrole">Jawatan</label><input id="mn_vrole" oninput="mnSet('verified_role', this.value)"></div>
           </div>
         </details>
 
         <div class="mn-actions">
-          <button class="btn secondary" onclick="mnSave()">Simpan</button>
+          <button class="btn secondary" onclick="mnSaveClick()">💾 Simpan</button>
           <button class="btn secondary" onclick="mnPreview()">Pratonton</button>
           <button class="btn" onclick="mnFinalize()">Jana minit</button>
         </div>
@@ -732,7 +849,7 @@
         <div id="mnSessBody"></div>
         <div class="mn-actions mn-sess-actions">
           <button class="btn secondary" id="msPrev" onclick="mnGoSess(-1)">‹ Sebelum</button>
-          <button class="btn secondary" onclick="mnSessSave()">Simpan draf</button>
+          <button class="btn secondary" onclick="mnSessSave()">💾 Simpan</button>
           <button class="btn" id="msNext" onclick="mnGoSess(1)">Seterusnya ›</button>
         </div>
       </div>
@@ -748,6 +865,8 @@
           <button class="btn secondary small" onclick="shiftObYear(1)">›</button>
         </div>
       </div>
+
+      <div id="obReminders"></div>
 
       <div class="panel">
         <div class="ob-title" id="obTitle1"></div>
@@ -1021,6 +1140,15 @@ function refreshCurrentView(view){
    ============================================================ */
 function openModal(html){ document.getElementById('modalBody').innerHTML = html; document.getElementById('modalBg').classList.add('active'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('active'); }
+// short confirmation that appears at the bottom of the screen
+function showToast(msg, kind){
+  let t = document.getElementById('appToast');
+  if(!t){ t = document.createElement('div'); t.id = 'appToast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite'); document.body.appendChild(t); }
+  t.textContent = String(msg||'');
+  t.className = 'show ' + (kind || 'ok');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ t.className = kind || 'ok'; }, kind === 'err' ? 5000 : 2600);
+}
 document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
 function fmtDate(d){ if(!d) return ''; const dt = new Date(d); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtTime(t){ if(!t) return ''; const dt = new Date(t); if(isNaN(dt)) return t; return dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
@@ -2025,70 +2153,189 @@ async function loadOutbreak(){
     apiGet('getOutbreakLinks', {})
   ]);
   cache.outbreak = obRes.data || []; cache.omt = omtRes.data || []; cache.links = linkRes.data || [];
+  OB_RECS = [];
   renderObGrid('obGridOutbreak', cache.outbreak, 'Outbreak');
+  renderObReminders();
   renderObGrid('obGridOMT', cache.omt, 'OMT');
   document.getElementById('linksList').innerHTML = cache.links.length ? cache.links.map(l=>`
     <div class="link-row"><a href="${l.url}" target="_blank">${l.title}</a><button class="btn small secondary" onclick="deleteLink('${l.link_id}')">Remove</button></div>
   `).join('') : '<div class="empty">Belum ada link. Tambah CRE Tracker System / Carta Alir Kerja di sini.</div>';
 }
 function shiftObYear(delta){ obYear += delta; loadOutbreak(); }
+// local YYYY-MM-DD (toISOString() would shift Malaysian dates to the previous day)
+function obYmd(d){ d = new Date(d); return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function obDate(v){ const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : new Date(v); }
+let OB_RECS = [];
+const OB_CLOSE_DAYS = 42;   // 6 weeks after the last positive case → closing meeting
+const OB_SOON_DAYS = 14;    // start reminding 2 weeks before
+function obToday(){ const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+// still running: not marked closed, and either being tracked (last positive set) or without a past end date
+function obIsActive(r){
+  if(r.record_type && r.record_type !== 'Outbreak') return false;
+  if(String(r.status||'') === 'Closed') return false;
+  if(r.last_positive_date) return true;
+  if(!r.end_date) return true;
+  return obDate(r.end_date) >= obToday();
+}
+function obEnd(r){
+  if(obIsActive(r)) return obToday();
+  return obDate(r.end_date || r.start_date);
+}
+function obAddDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function obLabel(d){ return d.getDate() + ' ' + CAL_MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+// Reminder cards: days since the last positive case, counting to 6 weeks
+async function renderObReminders(){
+  const box = document.getElementById('obReminders'); if(!box) return;
+  const yNow = new Date().getFullYear();
+  const res = obYear === yNow ? { data: cache.outbreak } : await apiGet('getOutbreakRecords', { record_type:'Outbreak', year: yNow });
+  const act = (res.data || []).filter(obIsActive);
+  if(!act.length){ box.innerHTML = ''; return; }
+  const today = obToday();
+  const cards = act.map(r=>{
+    const base = obDate(r.last_positive_date || r.start_date);
+    const days = Math.max(0, Math.round((today - base) / 86400000));
+    const due = obAddDays(base, OB_CLOSE_DAYS), left = OB_CLOSE_DAYS - days;
+    const st = left <= 0 ? 'due' : (left <= OB_SOON_DAYS ? 'soon' : 'watch');
+    const head = st === 'due' ? 'Sudah 6 minggu — adakan mesyuarat penutup' : st === 'soon' ? 'Hampir 6 minggu — rancang mesyuarat penutup' : 'Dalam pemantauan';
+    const sub = st === 'due' ? `Tiada kes baharu sejak ${obLabel(base)} — outbreak boleh diisytiharkan tamat.`
+      : `${left} hari lagi ke 6 minggu (${obLabel(due)}).`;
+    const pct = Math.min(100, Math.round(days / OB_CLOSE_DAYS * 100));
+    const i = OB_RECS.push(r) - 1;
+    return { st, left, html: `<div class="ob-rem ${st}">
+      <div class="ob-rem-top">
+        <span class="ob-rem-ico" aria-hidden="true">${st === 'watch' ? '🦠' : '⏰'}</span>
+        <div class="ob-rem-txt"><strong>${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</strong><em>${head}</em><small>${sub}</small></div>
+        <div class="ob-rem-day"><b>${days}</b><span>/ 42 hari</span></div>
+      </div>
+      <div class="ob-rem-bar" role="progressbar" aria-valuemin="0" aria-valuemax="42" aria-valuenow="${days}" aria-label="Hari sejak kes positif terakhir"><i style="width:${pct}%"></i><span style="left:${Math.round((OB_CLOSE_DAYS-OB_SOON_DAYS)/OB_CLOSE_DAYS*100)}%"></span></div>
+      <div class="ob-rem-meta">Kes positif terakhir: <strong>${r.last_positive_date ? obLabel(base) : 'belum diisi (kiraan dari tarikh mula)'}</strong></div>
+      <div class="ob-rem-actions">
+        <button class="btn small secondary" onclick="obNewPositive(OB_RECS[${i}])">+ Ada kes positif baharu</button>
+        ${st !== 'watch' ? `<button class="btn small" onclick="obCloseOutbreak(OB_RECS[${i}])">Outbreak ditutup</button>` : ''}
+        <button class="at-link" onclick="openOutbreakModal('Outbreak', OB_RECS[${i}])">Ubah</button>
+      </div>
+    </div>` };
+  }).sort((a,b)=>a.left - b.left);
+  box.innerHTML = `<div class="ob-rem-head">Outbreak aktif (${act.length})</div><div class="ob-rem-list">${cards.map(c=>c.html).join('')}</div>`;
+}
+function obNewPositive(r){
+  openModal(`<h3>Kes positif baharu — ${obEsc(r.ward)}</h3>
+    <div class="mn-help" style="margin:0 0 10px;">Kiraan 6 minggu akan bermula semula dari tarikh ini.</div>
+    <div class="field"><label for="np_date">Tarikh kes positif terakhir</label><input type="date" id="np_date" value="${obYmd(new Date())}" max="${obYmd(new Date())}"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="np_save" onclick="obSaveNewPositive('${obEsc(r.record_id)}')">Simpan</button></div>`);
+}
+async function obSaveNewPositive(id){
+  const d = document.getElementById('np_date').value; if(!d) return;
+  const btn = document.getElementById('np_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = await apiPost('updateOutbreakRecord', { record_id: id, last_positive_date: d, status: 'Active', end_date: '' });
+  if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message||'')); return; }
+  closeModal(); await loadOutbreak(); showToast('✓ Kiraan 6 minggu bermula dari ' + obLabel(obDate(d)));
+}
+function obCloseOutbreak(r){
+  openModal(`<h3>Tutup outbreak — ${obEsc(r.ward)}</h3>
+    <div class="mn-help" style="margin:0 0 10px;">Outbreak akan ditanda tamat dan kad peringatan dibuang. Tempoh dalam jadual berakhir pada tarikh ini.</div>
+    <div class="field"><label for="cl_date">Tarikh outbreak diisytiharkan tamat (mesyuarat penutup)</label><input type="date" id="cl_date" value="${obYmd(new Date())}"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="cl_save" onclick="obSaveClose('${obEsc(r.record_id)}')">Tutup outbreak</button></div>`);
+}
+async function obSaveClose(id){
+  const d = document.getElementById('cl_date').value; if(!d) return;
+  const btn = document.getElementById('cl_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = await apiPost('updateOutbreakRecord', { record_id: id, status: 'Closed', end_date: d });
+  if(!res.success){ btn.disabled = false; btn.textContent = 'Tutup outbreak'; alert('Gagal simpan: ' + (res.message||'')); return; }
+  closeModal(); await loadOutbreak(); showToast('✓ Outbreak ditutup pada ' + obLabel(obDate(d)));
+}
+// wards shown = the standard list + any other ward that has a record (e.g. SCN, NICU)
+function obWards(){
+  const extra = [];
+  (cache.outbreak||[]).concat(cache.omt||[]).forEach(r=>{ const w = String(r.ward||'').trim(); if(w && WARDS.indexOf(w) < 0 && extra.indexOf(w) < 0) extra.push(w); });
+  return WARDS.concat(extra.sort());
+}
 function renderObGrid(elId, records, type){
   let html = '<div class="hcell"></div>' + MONTHS.map(m=>`<div class="hcell">${m}</div>`).join('');
-  WARDS.forEach(ward=>{
-    html += `<div class="wcell">${ward}</div>`;
+  obWards().forEach(ward=>{
+    html += `<div class="wcell">${obEsc(ward)}</div>`;
     for(let m=0; m<12; m++){
-      const rec = records.find(r=>{
-        if(r.ward !== ward) return false;
-        const s = new Date(r.start_date), e = new Date(r.end_date || r.start_date);
-        const monthStart = new Date(obYear, m, 1), monthEnd = new Date(obYear, m+1, 0);
+      const monthStart = new Date(obYear, m, 1), monthEnd = new Date(obYear, m+1, 0, 23, 59);
+      const recs = records.filter(r=>{
+        if(String(r.ward||'').trim() !== ward) return false;
+        const s = obDate(r.start_date), e = obEnd(r);
         return s <= monthEnd && e >= monthStart;
       });
-      if(rec){
-        const sd = new Date(rec.start_date), ed = new Date(rec.end_date || rec.start_date);
-        const label = sd.getTime()!==ed.getTime()
-          ? `${sd.getDate()}/${sd.getMonth()+1}/${String(obYear).slice(2)}-${ed.getDate()}/${ed.getMonth()+1}/${String(obYear).slice(2)}`
-          : `${sd.getDate()}/${sd.getMonth()+1}`;
-        html += `<div class="cell filled ${type}" onclick='openOutbreakModal("${type}", ${JSON.stringify(rec).replace(/'/g,"&apos;")})'>${label}</div>`;
+      if(recs.length){
+        const rec = recs[0];
+        const sd = obDate(rec.start_date), ed = obEnd(rec);
+        const yy = d=>String(d.getFullYear()).slice(2);
+        const open = type === 'Outbreak' && obIsActive(rec);
+        const label = open ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-kini`
+          : obYmd(sd) !== obYmd(ed)
+          ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-${ed.getDate()}/${ed.getMonth()+1}/${yy(ed)}`
+          : `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}`;
+        const i = OB_RECS.push(rec) - 1;
+        html += `<div class="cell filled ${type}" title="${obEsc(rec.organism||'')}" onclick="openOutbreakModal('${type}', OB_RECS[${i}])">${label}${recs.length > 1 ? `<small>+${recs.length-1}</small>` : ''}</div>`;
       } else {
-        html += `<div class="cell" onclick="openOutbreakModal('${type}', null, '${ward}', ${m})"></div>`;
+        html += `<div class="cell" onclick="openOutbreakModal('${type}', null, '${obEsc(ward)}', ${m})"></div>`;
       }
     }
   });
   document.getElementById(elId).innerHTML = html;
 }
+function obEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function openOutbreakModal(type, existing, presetWard, presetMonth){
   const r = existing || {};
-  const defaultDate = (presetWard!==undefined && presetMonth!==undefined) ? new Date(obYear, presetMonth, 1).toISOString().slice(0,10) : '';
+  const defaultDate = (presetMonth!==undefined) ? obYmd(new Date(obYear, presetMonth, 1)) : obYmd(new Date());
+  const wards = obWards(), cur = r.ward || presetWard || wards[0];
   openModal(`
-    <h3>${type==='OMT' ? 'Outbreak Management Meeting' : 'Outbreak Period'}</h3>
-    <div class="field"><label>Ward</label><select id="ob_ward">
-      ${WARDS.map(w=>`<option ${ (r.ward||presetWard)===w ? 'selected':''}>${w}</option>`).join('')}
-    </select></div>
-    <div class="field"><label>Organism / Notes label</label><input id="ob_organism" value="${r.organism||''}" placeholder="e.g. CRE"></div>
+    <h3>${type==='OMT' ? 'Mesyuarat OMT' : 'Tempoh Outbreak'}</h3>
+    <div class="field"><label for="ob_ward">Wad / unit</label><select id="ob_ward" onchange="document.getElementById('ob_ward_other').classList.toggle('hidden', this.value!=='__other')">
+      ${wards.map(w=>`<option ${cur===w ? 'selected':''}>${obEsc(w)}</option>`).join('')}
+      <option value="__other">+ Wad lain (cth. SCN, NICU)…</option>
+    </select>
+    <input id="ob_ward_other" class="hidden" style="margin-top:8px;" placeholder="Taip nama wad, cth. SCN"></div>
+    <div class="field"><label for="ob_organism">Organisma / label</label><input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="cth. CRE, RSV"></div>
     <div class="formgrid">
-      <div class="field"><label>Start Date</label><input type="date" id="ob_start" value="${r.start_date? new Date(r.start_date).toISOString().slice(0,10) : defaultDate}"></div>
-      <div class="field"><label>End Date ${type==='OMT'?'(optional)':''}</label><input type="date" id="ob_end" value="${r.end_date? new Date(r.end_date).toISOString().slice(0,10) : ''}"></div>
+      <div class="field"><label for="ob_start">Tarikh mula</label><input type="date" id="ob_start" value="${r.start_date ? obYmd(obDate(r.start_date)) : defaultDate}"></div>
+      <div class="field"><label for="ob_end">Tarikh tamat ${type==='OMT'?'(pilihan)':'(kosongkan jika masih aktif)'}</label><input type="date" id="ob_end" value="${r.end_date && (type!=='Outbreak' || String(r.status)==='Closed' || !obIsActive(r)) && obYmd(obDate(r.end_date)) !== obYmd(obDate(r.start_date)) ? obYmd(obDate(r.end_date)) : ''}"></div>
     </div>
-    <div class="field"><label>Additional Notes</label><textarea id="ob_notes">${r.notes||''}</textarea></div>
+    ${type==='Outbreak' ? `<div class="formgrid">
+      <div class="field"><label for="ob_lastpos">Tarikh kes positif terakhir</label><input type="date" id="ob_lastpos" value="${r.last_positive_date ? obYmd(obDate(r.last_positive_date)) : ''}"></div>
+      <div class="field"><label for="ob_status">Status</label><select id="ob_status"><option value="Active" ${String(r.status)!=='Closed'?'selected':''}>Aktif</option><option value="Closed" ${String(r.status)==='Closed'?'selected':''}>Ditutup</option></select></div>
+    </div>
+    <div class="mn-help" style="margin:-4px 0 12px;">Peringatan mesyuarat penutup dikira 6 minggu dari kes positif terakhir.</div>` : ''}
+    <div class="field"><label for="ob_notes">Catatan</label><textarea id="ob_notes">${obEsc(r.notes||'')}</textarea></div>
     <div class="modal-actions">
-      ${existing ? `<button class="btn secondary" onclick="deleteOutbreakRecord('${r.record_id}')">Delete</button>` : ''}
-      <button class="btn secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn" onclick="saveOutbreakRecord('${type}','${r.record_id||''}')">Save</button>
+      ${existing ? `<button class="btn secondary" onclick="deleteOutbreakRecord('${obEsc(r.record_id)}')">Padam</button>` : ''}
+      <button class="btn secondary" onclick="closeModal()">Batal</button>
+      <button class="btn" id="ob_save" onclick="saveOutbreakRecord('${type}','${obEsc(r.record_id||'')}')">Simpan</button>
     </div>
   `);
 }
 async function saveOutbreakRecord(type, id){
+  let ward = document.getElementById('ob_ward').value;
+  if(ward === '__other') ward = document.getElementById('ob_ward_other').value.trim().toUpperCase();
+  const start = document.getElementById('ob_start').value;
+  if(!ward){ document.getElementById('ob_ward_other').focus(); return; }
+  if(!start){ alert('Pilih tarikh mula.'); return; }
   const data = {
-    record_type: type,
-    ward: document.getElementById('ob_ward').value,
+    record_type: type, ward,
     organism: document.getElementById('ob_organism').value,
-    start_date: document.getElementById('ob_start').value,
-    end_date: document.getElementById('ob_end').value || document.getElementById('ob_start').value,
+    start_date: start,
+    end_date: document.getElementById('ob_end').value || (type === 'Outbreak' ? '' : start),
     notes: document.getElementById('ob_notes').value
   };
-  if(id){ data.record_id = id; await apiPost('updateOutbreakRecord', data); }
-  else { await apiPost('createOutbreakRecord', data); }
-  closeModal(); loadOutbreak();
+  if(type === 'Outbreak'){
+    data.last_positive_date = document.getElementById('ob_lastpos').value;
+    data.status = document.getElementById('ob_status').value;
+    if(data.status === 'Closed' && !data.end_date) data.end_date = data.last_positive_date || start;
+  }
+  if(data.end_date < data.start_date){ alert('Tarikh tamat sebelum tarikh mula.'); return; }
+  const btn = document.getElementById('ob_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = id ? await apiPost('updateOutbreakRecord', Object.assign({ record_id: id }, data)) : await apiPost('createOutbreakRecord', data);
+  if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message || 'cuba lagi')); return; }
+  closeModal();
+  const y = obDate(start).getFullYear();
+  if(y !== obYear) obYear = y;   // jump to the year of the record so it is visible
+  await loadOutbreak();
+  showToast('✓ Disimpan — ' + ward + ', ' + obDate(start).getDate() + ' ' + MONTHS[obDate(start).getMonth()]);
 }
 async function deleteOutbreakRecord(id){
   await apiPost('deleteOutbreakRecord', { record_id:id });
@@ -2291,7 +2538,7 @@ function minitMapSlides(items, pages, minScore){
   return result;
 }
 
-/* ---------- 4. Rough draft from slide text (no AI) ---------- */
+/* ---------- 4. Slide text → minute sentences (no AI) ---------- */
 // Lines that look like patient identifiers are never copied into a draft.
 const MINIT_NAME_RE = /\b(bin|binti|bt|bte|a\/l|a\/p|mrn|ic no|no\.? ?kp)\b/i;
 function minitLooksLikePatientRow(l){
@@ -2299,57 +2546,157 @@ function minitLooksLikePatientRow(l){
   // "14/12/2025 INDEX NAME NAME 44 ORTHO" style rows from line lists
   if(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+(index|c\/c|case|kes)\b/i.test(l)) return true;
   if(/\b(index|c\/c)\b/i.test(l) && /[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}/.test(l) && /\d/.test(l)) return true;
+  if(/\b\d{6}-\d{2}-\d{4}\b|\bRN\s*\d{5,}/i.test(l)) return true;   // IC / registration numbers
   return false;
 }
 function minitSlideLines(text){
   const raw = String(text||'').split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
   const merged = [];
   raw.forEach(l=>{
-    const isNew = /^([•▪●◦\-–*]|\d{1,2}[\.\)]|[ivx]{1,4}[\.\)])\s/i.test(l) || /^[A-Z]/.test(l);
+    const isNew = /^([•▪●◦\-–*➢►✓]|\d{1,2}[\.\)]|[ivx]{1,4}[\.\)])\s/i.test(l) || /^[A-Z]/.test(l);
     const prev = merged[merged.length-1];
     if(prev && !isNew && !/[\.:;!?]$/.test(prev)) merged[merged.length-1] = prev + ' ' + l;
     else merged.push(l);
   });
-  return merged.map(l=>l.replace(/^([•▪●◦\-–*]|\d{1,2}[\.\)]|[ivx]{1,4}[\.\)])\s+/i,'').trim());
+  return merged.map(l=>l.replace(/^([•▪●◦\-–*➢►✓]|\d{1,2}[\.\)]|[ivx]{1,4}[\.\)])\s+/i,'').trim());
 }
-function minitDraftFromSlides(item, pages){
-  const out = ['Mesyuarat dibentangkan dengan ' + (item.title||'').replace(/^\d+\.\s*/,'') + '.'];
-  const seen = new Set();
-  let total = 0;
-  pages.forEach(pg=>{
-    let n = 0;
-    minitSlideLines(pg.text).forEach(l=>{
-      if(n >= 6 || total >= 24) return;
-      if(minitLooksLikePatientRow(l)) return;
-      const words = l.split(' ').filter(w=>/[a-zA-Z]{3,}/.test(w));
-      const hasData = /\d/.test(l) && /%|kpi|kadar|rate|skor|score|meningkat|menurun|increase|decrease|jumlah|total|compliance|pematuhan/i.test(l);
-      if((words.length < 4 && !hasData) || l.length < 18) return;
-      const key = l.toLowerCase();
-      if(seen.has(key)) return;
-      seen.add(key); n++; total++;
-      out.push('- ' + l);
-    });
+// footer / header noise repeated on every slide
+const MINIT_NOISE_RE = /^(hospital tengku permaisuri norashikin|htpn|unit (pencegahan )?(dan |& )?kawalan infeksi|uki|kementerian kesihatan malaysia|kkm|slide \d+|slaid \d+|\d{1,3}|page \d+|www\.|https?:)/i;
+function minitCleanLines(text){
+  return minitSlideLines(text).filter(l=>{
+    if(minitLooksLikePatientRow(l)) return false;
+    if(MINIT_NOISE_RE.test(l) && l.length < 60) return false;
+    const words = l.split(' ').filter(w=>/[a-zA-Z]{2,}/.test(w));
+    if(!words.length) return false;                       // numbers-only table cells
+    return true;
   });
-  return out.join('\n');
 }
+function minitSentence(l){
+  l = String(l||'').replace(/\s+/g,' ').replace(/\s+([,.;:%)])/g,'$1').trim();
+  if(!l) return '';
+  l = l.charAt(0).toUpperCase() + l.slice(1);
+  return /[.!?:;]$/.test(l) ? l : l + '.';
+}
+// "Latar Belakang" → "Latar belakang" (acronyms such as RSV, HH stay)
+function minitSentenceCase(t){
+  return String(t||'').split(' ').map((w, i)=>i === 0 || /^[A-Z0-9&\-\/()]{2,}$/.test(w) ? w : (/^[A-Z][a-z]/.test(w) ? w.charAt(0).toLowerCase() + w.slice(1) : w)).join(' ');
+}
+// first short line without a full stop = the slide's title
+function minitSlideTitle(lines){
+  const t = lines.find(l=>l.length <= 90 && !/[.;]$/.test(l));
+  return t ? t.replace(/[:\-–]+$/,'').trim() : '';
+}
+// opening sentence chosen from what the slide is about (IPC wording used at UKI)
+const MINIT_TOPICS = [
+  [/defin/i, 'Definisi kes yang digunakan dalam penyiasatan adalah seperti berikut:'],
+  [/mapping|pemetaan|timeline|garis masa|epi(demic)? ?curve|lengkung/i, 'Pemetaan kes dan garis masa kejadian telah dibentangkan seperti berikut:'],
+  [/hand hygiene|kebersihan tangan|cucian tangan|\bhh\b|abhr|5 moment/i, 'Pencapaian audit kebersihan tangan (hand hygiene) adalah seperti berikut:'],
+  [/contact|kontak|saringan|screening|swab|makmal|lab|keputusan ujian|pcr/i, 'Keputusan saringan, pengesanan kontak dan ujian makmal adalah seperti berikut:'],
+  [/clean|pembersihan|pencucian|persekitaran|environment|glo.?germ|terminal|disinfect/i, 'Pemantauan pembersihan persekitaran dan peralatan mendapati:'],
+  [/audit|compliance|pematuhan|bundle|pemantauan|monitoring|rondaan/i, 'Pemantauan dan audit oleh Unit Kawalan Infeksi mendapati:'],
+  [/background|latar belakang|kes indeks|index case|notifikasi|notified/i, 'Mesyuarat dimaklumkan mengenai latar belakang kejadian seperti berikut:'],
+  [/hipotesis|hypothes|punca|root cause|analisis|analysis|investigation|siasatan/i, 'Hasil penyiasatan dan analisis punca adalah seperti berikut:'],
+  [/control|kawalan|intervensi|intervention|langkah|measure|isolasi|cohort/i, 'Langkah kawalan yang telah diambil adalah seperti berikut:'],
+  [/recommend|cadangan|saranan|plan|pelan|tindakan susulan/i, 'Cadangan dan tindakan susulan yang dikemukakan adalah seperti berikut:'],
+  [/training|latihan|epsa|kursus|bengkel/i, 'Status latihan kakitangan adalah seperti berikut:']
+];
+// the slide's own title decides first, then its content, then the agenda title
+function minitTopicIntro(){
+  for(const text of arguments){
+    const hit = MINIT_TOPICS.find(([re])=>re.test(text||''));
+    if(hit) return hit[1];
+  }
+  return 'Mesyuarat dimaklumkan bahawa:';
+}
+// data lines first (numbers, %, rates), then full sentences
+function minitKeyLines(lines, max){
+  const scored = lines.map((l, i)=>{
+    const words = l.split(' ').filter(w=>/[a-zA-Z]{3,}/.test(w)).length;
+    let sc = 0;
+    if(/\d/.test(l)) sc += 2;
+    if(/%|kadar|rate|jumlah|total|kes|case|positif|positive|negatif|sasaran|target|<|>|≥|≤/i.test(l)) sc += 2;
+    if(words >= 5) sc += 1;
+    if(words < 3 && !/\d/.test(l)) sc -= 3;
+    if(l.length < 12) sc -= 2;
+    return { l, i, sc };
+  }).filter(x=>x.sc > 0);
+  return scored.sort((a,b)=>b.sc-a.sc || a.i-b.i).slice(0, max).sort((a,b)=>a.i-b.i).map(x=>x.l);
+}
+/* style 'ringkas': "<pembentang> membentangkan slaid … yang merangkumi: • tajuk slaid"
+   style 'dapatan': one sub-heading per slide with an opening sentence and key data */
+function minitSentencesFromSlides(item, pages, opts){
+  opts = opts || {};
+  const style = opts.style || 'dapatan';
+  const title = String(item.title||'').replace(/^\d+(\.\d+)*\.?\s*/,'').trim();
+  const lowTitle = title.toLowerCase();
+  const slides = pages.map(p=>{ const lines = minitCleanLines(p.text); return { num: p.num, lines, title: minitSlideTitle(lines) }; }).filter(s=>s.lines.length);
+  const ref = '*(rujuk slaid pembentangan yang dilampirkan)*';
+  if(!slides.length) return '';
+  const out = [];
+  if(style === 'ringkas'){
+    const who = String(opts.presenter||'').trim();
+    out.push((who ? who + ' membentangkan' : 'Mesyuarat dibentangkan dengan') + ' slaid ' + lowTitle.replace(/^pembentangan\s+/,'') + ' yang merangkumi:');
+    const seen = new Set();
+    slides.forEach(s=>{
+      const t = s.title || s.lines[0];
+      const k = t.toLowerCase();
+      if(seen.has(k)) return; seen.add(k);
+      out.push('- ' + minitSentence(minitSentenceCase(t)));
+    });
+    out.push(ref);
+    return out.join('\n');
+  }
+  out.push('Mesyuarat dimaklumkan mengenai ' + lowTitle.replace(/^pembentangan\s+/,'') + ' seperti slaid yang dibentangkan.');
+  const many = slides.length > 1;
+  const seenTitle = new Set(), seenLine = new Set();
+  slides.forEach(s=>{
+    const body = s.lines.filter(l=>l !== s.title);
+    const key = minitKeyLines(body, 6).filter(l=>{ const k = l.toLowerCase(); if(seenLine.has(k)) return false; seenLine.add(k); return true; });
+    if(!key.length && !s.title) return;
+    const tk = (s.title||'').toLowerCase();
+    if(many && s.title && !seenTitle.has(tk)){ seenTitle.add(tk); out.push(''); out.push('## ' + s.title); }
+    if(key.length){
+      out.push(minitTopicIntro(s.title, key.join(' '), title));
+      key.forEach(l=>out.push('- ' + minitSentence(l)));
+    }
+  });
+  out.push('');
+  out.push(ref);
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+// kept for older callers
+function minitDraftFromSlides(item, pages){ return minitSentencesFromSlides(item, pages, { style:'dapatan' }); }
 
-/* ---------- 5. DOCX builder (format ikut minit contoh UKI) ---------- */
-// figuresByItem: { [itemIndex]: [{ data: Uint8Array, width, height, caption }] }
+/* ---------- 5. DOCX builder (format ikut minit OMT Wad 7, UKI HTPN) ---------- */
+const MINIT_HARI = ['AHAD','ISNIN','SELASA','RABU','KHAMIS','JUMAAT','SABTU'];
+function minitDateUpper(iso, label){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return String(label||iso||'').toUpperCase();
+  const d = new Date(+m[1], +m[2]-1, +m[3]);
+  return (String(label||'').toUpperCase() || iso) + ' (' + MINIT_HARI[d.getDay()] + ')';
+}
+// Penutup always last, Perkara/Isu berbangkit just before it
+function minitOrderItems(items){
+  const list = (items||[]).slice();
+  const isClose = it=>/^\s*penutup/i.test(it.title||'');
+  return list.filter(it=>!isClose(it)).concat(list.filter(isClose));
+}
+// figuresByItem: { [itemIndex]: [{ data: Uint8Array, width, height, caption }] } (index in m.items)
 function minitBuildDocx(D, m, figuresByItem){
   figuresByItem = figuresByItem || {};
-  const FONT = 'Times New Roman';
-  const PAGE_W = 11906, MARGIN = 1440, CONTENT_W = PAGE_W - MARGIN*2; // 9026
-  const BIL_W = 850, BODY_W = CONTENT_W - BIL_W;
+  const FONT = 'Arial';
+  const PAGE_W = 11906, MARGIN = 1134, CONTENT_W = PAGE_W - MARGIN*2;
+  const BIL_W = 900, BODY_W = CONTENT_W - BIL_W;
   const border = { style: D.BorderStyle.SINGLE, size: 4, color: '000000' };
   const borders = { top: border, bottom: border, left: border, right: border };
   const noB = { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const noBorders = { top: noB, bottom: noB, left: noB, right: noB, insideHorizontal: noB, insideVertical: noB };
-  const cellMargins = { top: 60, bottom: 60, left: 100, right: 100 };
+  const cellMargins = { top: 80, bottom: 80, left: 110, right: 110 };
+  const SZ = 20; // 10 pt, as in the UKI OMT minute
 
   function runs(text, base){
-    base = base || {};
+    base = Object.assign({ size: SZ }, base || {});
     const out = [];
-    // **bold** and *italic*
     const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
     let last = 0, mm;
     const s = String(text||'');
@@ -2364,26 +2711,32 @@ function minitBuildDocx(D, m, figuresByItem){
     if(!out.length) out.push(new D.TextRun(Object.assign({ text: '' }, base)));
     return out;
   }
+  const J = D.AlignmentType.JUSTIFIED;
   function para(text, opts){
     opts = opts || {};
-    return new D.Paragraph(Object.assign({ children: runs(text, opts.run), spacing: { after: 100 } }, opts.p || {}));
+    return new D.Paragraph(Object.assign({ alignment: J, children: runs(text, opts.run), spacing: { after: 120, line: 276 } }, opts.p || {}));
   }
   function tindakan(text){
-    return new D.Paragraph({ alignment: D.AlignmentType.RIGHT, spacing: { before: 120, after: 120 },
-      children: [ new D.TextRun({ text: 'Tindakan : ' + text, bold: true }) ] });
+    return new D.Paragraph({ spacing: { before: 120, after: 80 }, keepLines: true,
+      children: [ new D.TextRun({ text: 'Tindakan: ', bold: true, size: SZ }), new D.TextRun({ text: text, bold: true, size: SZ }) ] });
   }
-  function contentToParagraphs(content){
-    const ps = [];
+  function cellP(text, o){ o = o || {}; return new D.Paragraph({ alignment: o.align, spacing: { after: 0 }, children: [ new D.TextRun({ text: text, bold: !!o.bold, size: SZ }) ] }); }
+  function contentToParagraphs(content, no){
+    const ps = []; let sub = 0;
     String(content||'').replace(/\r/g,'').split('\n').forEach(raw=>{
       const line = raw.replace(/\s+$/,'');
       if(!line.trim()) return;
       let mm;
-      if((mm = line.match(/^##\s+(.*)$/))) { ps.push(para(mm[1], { run:{ bold:true }, p:{ spacing:{ before:160, after:100 } } })); return; }
+      if((mm = line.match(/^##\s+(.*)$/))) {
+        let t = mm[1].trim();
+        if(!/^\d+\.\d+/.test(t)){ sub++; t = no + '.' + sub + ' ' + t; }
+        ps.push(para(t, { run:{ bold:true }, p:{ spacing:{ before:160, after:80 }, keepNext: true } })); return;
+      }
       if((mm = line.match(/^(?:\s{2,}|\t)[-•o]\s+(.*)$/)) || (mm = line.match(/^--\s+(.*)$/))) {
-        ps.push(new D.Paragraph({ numbering: { reference: 'minit-bullets', level: 1 }, spacing: { after: 60 }, children: runs(mm[1]) })); return;
+        ps.push(new D.Paragraph({ alignment: J, numbering: { reference: 'minit-bullets', level: 1 }, spacing: { after: 60 }, children: runs(mm[1]) })); return;
       }
       if((mm = line.match(/^[-•]\s+(.*)$/))) {
-        ps.push(new D.Paragraph({ numbering: { reference: 'minit-bullets', level: 0 }, spacing: { after: 60 }, children: runs(mm[1]) })); return;
+        ps.push(new D.Paragraph({ alignment: J, numbering: { reference: 'minit-bullets', level: 0 }, spacing: { after: 60 }, children: runs(mm[1]) })); return;
       }
       if((mm = line.match(/^tindakan\s*:\s*(.*)$/i))) { ps.push(tindakan(mm[1])); return; }
       ps.push(para(line));
@@ -2392,53 +2745,65 @@ function minitBuildDocx(D, m, figuresByItem){
   }
 
   const children = [];
-  // Title block
-  const titleLines = ['HOSPITAL TENGKU PERMAISURI NORASHIKIN'].concat(String(m.title||'MINIT MESYUARAT').split('\n'));
-  titleLines.forEach(t=>children.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 0 }, children: [ new D.TextRun({ text: t.trim(), bold: true }) ] })));
-  children.push(new D.Paragraph({ children: [] }));
-  [['Tarikh', m.meeting_date_label || m.meeting_date], ['Masa', m.meeting_time], ['Tempat', m.venue]].forEach(([k,v])=>{
-    children.push(new D.Paragraph({ tabStops: [{ type: D.TabStopType.LEFT, position: 1300 }], spacing: { after: 0 },
-      children: [ new D.TextRun({ text: k, bold: true }), new D.TextRun({ text: ':\t' + (v||'') }) ] }));
+  // Title block — bold, centred, upper case; hospital name last
+  let titleLines = String(m.title||'MINIT MESYUARAT').split('\n').map(t=>t.trim()).filter(Boolean);
+  if(!titleLines.some(t=>/TENGKU PERMAISURI NORASHIKIN/i.test(t))) titleLines.push('HOSPITAL TENGKU PERMAISURI NORASHIKIN');
+  titleLines.forEach(t=>children.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 0 }, children: [ new D.TextRun({ text: t.toUpperCase(), bold: true, size: 22 }) ] })));
+  children.push(new D.Paragraph({ spacing: { after: 120 }, children: [] }));
+  [['TARIKH', minitDateUpper(m.meeting_date, m.meeting_date_label)], ['MASA', String(m.meeting_time||'').toUpperCase()], ['TEMPAT', String(m.venue||'').toUpperCase()]].forEach(([k,v])=>{
+    children.push(new D.Paragraph({ tabStops: [{ type: D.TabStopType.LEFT, position: 1700 }], indent: { left: 1900, hanging: 1900 }, spacing: { after: 40 },
+      children: [ new D.TextRun({ text: k, bold: true, size: SZ }), new D.TextRun({ text: '\t: ' + (v||''), bold: true, size: SZ }) ] }));
   });
-  children.push(new D.Paragraph({ children: [] }));
+  children.push(new D.Paragraph({ spacing: { after: 120 }, children: [] }));
 
-  // Attendance
+  // Attendance — BIL | NAMA | JAWATAN
   const att = (m.attendees||[]).filter(a=>a && (a.name||'').trim());
   if(att.length){
-    children.push(new D.Paragraph({ spacing: { after: 120 }, children: [ new D.TextRun({ text: 'Kehadiran:', bold: true }) ] }));
-    const NW = 4513, JW = CONTENT_W - NW;
+    children.push(new D.Paragraph({ spacing: { after: 120 }, children: [ new D.TextRun({ text: 'Senarai Kehadiran:', bold: true, size: SZ }) ] }));
+    const BW = 700, NW = 3900, JW = CONTENT_W - BW - NW;
+    const cell = (w, p, shade)=>new D.TableCell({ borders, width: { size: w, type: D.WidthType.DXA }, margins: cellMargins, verticalAlign: D.VerticalAlign.CENTER, shading: shade ? { fill: 'F2F2F2', type: D.ShadingType.CLEAR, color: 'auto' } : undefined, children: [p] });
     const hdr = new D.TableRow({ tableHeader: true, children: [
-      new D.TableCell({ borders, width: { size: NW, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [ new D.TextRun({ text: 'NAMA', bold: true }) ] }) ] }),
-      new D.TableCell({ borders, width: { size: JW, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [ new D.TextRun({ text: 'JAWATAN', bold: true }) ] }) ] })
+      cell(BW, cellP('BIL', { bold:true, align: D.AlignmentType.CENTER }), true),
+      cell(NW, cellP('NAMA', { bold:true, align: D.AlignmentType.CENTER }), true),
+      cell(JW, cellP('JAWATAN', { bold:true, align: D.AlignmentType.CENTER }), true)
     ]});
-    const rows = att.map((a,i)=>new D.TableRow({ children: [
-      new D.TableCell({ borders, width: { size: NW, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ children: [ new D.TextRun((i+1) + '. ' + a.name.trim()) ] }) ] }),
-      new D.TableCell({ borders, width: { size: JW, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ children: [ new D.TextRun((a.role||'').trim()) ] }) ] })
+    const rows = att.map((a,i)=>new D.TableRow({ cantSplit: true, children: [
+      cell(BW, cellP(String(i+1))),
+      cell(NW, cellP(a.name.trim())),
+      cell(JW, cellP((a.role||'').trim()))
     ]}));
-    children.push(new D.Table({ width: { size: CONTENT_W, type: D.WidthType.DXA }, columnWidths: [NW, JW], rows: [hdr].concat(rows) }));
-    children.push(new D.Paragraph({ children: [] }));
+    children.push(new D.Table({ width: { size: CONTENT_W, type: D.WidthType.DXA }, columnWidths: [BW, NW, JW], rows: [hdr].concat(rows) }));
+    children.push(new D.Paragraph({ spacing: { after: 120 }, children: [] }));
+  }
+  const absent = (m.absent||[]).filter(a=>a && (a.name||'').trim());
+  if(absent.length){
+    children.push(new D.Paragraph({ spacing: { after: 60 }, children: [ new D.TextRun({ text: 'Tidak hadir dengan maaf:', bold: true, size: SZ }) ] }));
+    absent.forEach(a=>children.push(new D.Paragraph({ spacing: { after: 40 }, children: [ new D.TextRun({ text: a.name.trim() + (a.role ? ' - ' + a.role.trim() : ''), size: SZ }) ] })));
+    children.push(new D.Paragraph({ spacing: { after: 120 }, children: [] }));
   }
 
-  // Agenda table
-  const itemRows = [ new D.TableRow({ children: [
-    new D.TableCell({ borders, width: { size: BIL_W, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ children: [ new D.TextRun({ text: 'BIL', bold: true }) ] }) ] }),
-    new D.TableCell({ borders, width: { size: BODY_W, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ children: [] }) ] })
+  // Agenda table — BIL | PERKARA, items numbered 1.0, 2.0 …
+  const itemRows = [ new D.TableRow({ tableHeader: true, children: [
+    new D.TableCell({ borders, width: { size: BIL_W, type: D.WidthType.DXA }, margins: cellMargins, shading: { fill: 'F2F2F2', type: D.ShadingType.CLEAR, color: 'auto' }, children: [ cellP('BIL', { bold:true, align: D.AlignmentType.CENTER }) ] }),
+    new D.TableCell({ borders, width: { size: BODY_W, type: D.WidthType.DXA }, margins: cellMargins, shading: { fill: 'F2F2F2', type: D.ShadingType.CLEAR, color: 'auto' }, children: [ cellP('PERKARA', { bold:true, align: D.AlignmentType.CENTER }) ] })
   ]}) ];
-  (m.items||[]).forEach((it, idx)=>{
-    const body = [ new D.Paragraph({ spacing: { after: 120 }, children: [ new D.TextRun({ text: it.title || '', bold: true }) ] }) ];
-    contentToParagraphs(it.content).forEach(p=>body.push(p));
-    (figuresByItem[idx]||[]).forEach(fig=>{
-      const maxW = 480; // px, fits the content column
+  const ordered = minitOrderItems((m.items||[]).map((it, idx)=>Object.assign({ _idx: idx }, it)));
+  ordered.forEach((it, k)=>{
+    const no = k + 1;
+    const body = [ new D.Paragraph({ spacing: { after: 100 }, keepNext: true, children: [ new D.TextRun({ text: String(it.title || '').toUpperCase(), bold: true, size: SZ }) ] }) ];
+    contentToParagraphs(it.content, no).forEach(p=>body.push(p));
+    (figuresByItem[it._idx]||[]).forEach(fig=>{
+      const maxW = 470;
       const w = Math.min(maxW, fig.width || maxW);
       const h = Math.round((fig.height || w*0.5625) * (w / (fig.width || maxW)));
       body.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 40 },
         children: [ new D.ImageRun({ type: 'jpg', data: fig.data, transformation: { width: w, height: h } }) ] }));
       if(fig.caption) body.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 120 },
-        children: [ new D.TextRun({ text: fig.caption, italics: true, size: 20 }) ] }));
+        children: [ new D.TextRun({ text: fig.caption, italics: true, size: 18 }) ] }));
     });
     if((it.tindakan||'').trim()) body.push(tindakan(it.tindakan.trim()));
     itemRows.push(new D.TableRow({ cantSplit: false, children: [
-      new D.TableCell({ borders, width: { size: BIL_W, type: D.WidthType.DXA }, margins: cellMargins, children: [ new D.Paragraph({ children: [ new D.TextRun((idx+1) + '.') ] }) ] }),
+      new D.TableCell({ borders, width: { size: BIL_W, type: D.WidthType.DXA }, margins: cellMargins, children: [ cellP(no + '.0') ] }),
       new D.TableCell({ borders, width: { size: BODY_W, type: D.WidthType.DXA }, margins: cellMargins, children: body })
     ]}));
   });
@@ -2446,29 +2811,29 @@ function minitBuildDocx(D, m, figuresByItem){
   children.push(new D.Paragraph({ children: [] }));
   children.push(new D.Paragraph({ children: [] }));
 
-  // Signature block (borderless layout table)
+  // Signature block (borderless)
   const half = Math.floor(CONTENT_W/2);
-  const sigCell = (label, name, role, date)=>new D.TableCell({ borders: { top: noB, bottom: noB, left: noB, right: noB }, width: { size: half, type: D.WidthType.DXA },
+  const sigCell = (label, name, role)=>new D.TableCell({ borders: { top: noB, bottom: noB, left: noB, right: noB }, width: { size: half, type: D.WidthType.DXA },
     children: [
-      new D.Paragraph({ spacing: { after: 480 }, children: [ new D.TextRun(label) ] }),
-      new D.Paragraph({ spacing: { after: 0 }, children: [ new D.TextRun({ text: name || '', bold: true }) ] }),
-      new D.Paragraph({ spacing: { after: 0 }, children: [ new D.TextRun(role || '') ] }),
-      new D.Paragraph({ spacing: { after: 0 }, children: [ new D.TextRun('Tarikh: ' + (date || '')) ] })
+      new D.Paragraph({ spacing: { after: 720 }, children: [ new D.TextRun({ text: label, size: SZ }) ] }),
+      new D.Paragraph({ spacing: { after: 40 }, children: [ new D.TextRun({ text: '.......................................................', size: SZ }) ] }),
+      new D.Paragraph({ spacing: { after: 0 }, children: [ new D.TextRun({ text: 'Nama: ' + (name || ''), size: SZ }) ] }),
+      new D.Paragraph({ spacing: { after: 0 }, children: [ new D.TextRun({ text: 'Jawatan: ' + (role || ''), size: SZ }) ] })
     ] });
   children.push(new D.Table({ width: { size: half*2, type: D.WidthType.DXA }, columnWidths: [half, half], borders: noBorders, rows: [
-    new D.TableRow({ children: [
-      sigCell('Disediakan oleh:', m.prepared_by, m.prepared_role, m.prepared_date),
-      sigCell('Disahkan oleh:', m.verified_by, m.verified_role, m.verified_date)
+    new D.TableRow({ cantSplit: true, children: [
+      sigCell('Disediakan oleh:', m.prepared_by, m.prepared_role),
+      sigCell('Di Semak & Disahkan oleh:', m.verified_by, m.verified_role)
     ] })
   ] }));
 
   return new D.Document({
     creator: 'Infection Control Manager — UKI HTPN',
     title: (m.title||'Minit Mesyuarat').split('\n')[0],
-    styles: { default: { document: { run: { font: FONT, size: 24 } } } },
+    styles: { default: { document: { run: { font: FONT, size: SZ } } } },
     numbering: { config: [ { reference: 'minit-bullets', levels: [
-      { level: 0, format: D.LevelFormat.BULLET, text: '●', alignment: D.AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 300 } }, run: { size: 18 } } },
-      { level: 1, format: D.LevelFormat.BULLET, text: 'o', alignment: D.AlignmentType.LEFT, style: { paragraph: { indent: { left: 1000, hanging: 300 } } } }
+      { level: 0, format: D.LevelFormat.BULLET, text: '•', alignment: D.AlignmentType.LEFT, style: { paragraph: { indent: { left: 400, hanging: 260 } } } },
+      { level: 1, format: D.LevelFormat.BULLET, text: 'o', alignment: D.AlignmentType.LEFT, style: { paragraph: { indent: { left: 800, hanging: 260 } } } }
     ] } ] },
     sections: [{ properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN } } }, children }]
   });
@@ -2490,13 +2855,15 @@ const MN_BACKUP_KEY = 'ipc_minit_backup';
 const MN_TEMPLATES = {
   jkiak: { title: 'MINIT MESYUARAT JAWATANKUASA KAWALAN INFEKSI & ANTIBIOTIK\nPERINGKAT HOSPITAL (JKIAK) BIL /' + new Date().getFullYear(), sessions: [] },
   omt: { title: 'MINIT MESYUARAT OUTBREAK MANAGEMENT TEAM (OMT)\n[ORGANISMA] WAD [ ] BIL /' + new Date().getFullYear(),
-    sessions: ['Perutusan Pengerusi','Latar belakang outbreak','Definisi kes','Pemetaan kes (mapping) & garis masa','Siasatan outbreak','Keputusan saringan & makmal','Langkah kawalan & intervensi','Cadangan & tindakan susulan','Penutup'] },
+    sessions: ['Perutusan Pengerusi','Pembentangan penyiasatan outbreak','Penemuan audit & tindakan','Pencapaian hand hygiene','Pencucian peralatan klinikal','Pembersihan persekitaran','Isu-isu berbangkit','Penutup'] },
   lain: { title: 'MINIT MESYUARAT ', sessions: [] }
 };
 let MN = null;            // { id, data }
 let MN_SESS = -1;         // open session index
 let MN_AI = null;
-let MN_DECK = null;       // one PDF for the whole meeting (optional)
+let MN_DECK = null;       // (older versions) — replaced by MN.data.deck
+const MN_DECK_DOCS = {};  // file index → loaded pdf.js document / image pages, this visit only
+let mnAutoTimer = null;
 const MN_FIG_CACHE = {};  // figure id → base64 (full size) for this session
 let mnBackupTimer = null;
 const mnScriptPromises = {};
@@ -2519,10 +2886,21 @@ function mnLoadScript(src){
 }
 async function mnEnsurePdfJs(){ await mnLoadScript(MN_LIBS.pdf); window.pdfjsLib.GlobalWorkerOptions.workerSrc = MN_LIBS.pdfWorker; return window.pdfjsLib; }
 async function mnEnsureDocx(){ await mnLoadScript(MN_LIBS.docx); return window.docx; }
+// Text of one PDF page. A wide horizontal gap between two pieces of text
+// becomes a tab, so table columns (Nama | Jawatan) stay apart.
 function mnPageText(tc){
-  let out = '';
-  (tc.items||[]).forEach(it=>{ out += (it.str||'') + (it.hasEOL ? '\n' : (it.str ? ' ' : '')); });
-  return out.replace(/[ \t]+\n/g,'\n').replace(/ {2,}/g,' ').trim();
+  let out = '', lastEnd = null, lastY = null;
+  (tc.items||[]).forEach(it=>{
+    const x = it.transform ? it.transform[4] : null, y = it.transform ? it.transform[5] : null;
+    if(lastEnd != null && x != null && y != null && lastY != null){
+      if(Math.abs(y - lastY) > 3 && !/\n$/.test(out)) out += '\n';
+      else if(x - lastEnd > 14 && !/[\n\t]$/.test(out)) out = out.replace(/ $/,'') + '\t';
+    }
+    out += (it.str||'') + (it.hasEOL ? '\n' : '');
+    if(it.str && !it.hasEOL && !/\s$/.test(it.str)) out += ' ';
+    lastEnd = x != null ? x + (it.width || 0) : null; lastY = y;
+  });
+  return out.replace(/ +\t/g,'\t').replace(/[ \t]+\n/g,'\n').replace(/ {2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();
 }
 async function mnRenderPdfPage(doc, num, targetWidth, quality){
   const page = await doc.getPage(num);
@@ -2558,7 +2936,7 @@ function mnBlank(tpl){
   const me = (typeof STAFF_LIST !== 'undefined' ? STAFF_LIST : []).find(s=>s.name===currentUser()) || {};
   return {
     title: t.title, meeting_date: new Date().toISOString().slice(0,10), meeting_time: '9.00 pagi – 12.30 tengah hari', venue: 'Bilik Mesyuarat Utama HTPN',
-    attendees: [], items: [],
+    attendees: [], absent: [], items: [], deck: null,
     prepared_by: currentUser() || '', prepared_role: me.role || '', prepared_date: '',
     verified_by: 'Dr Nor Zaila binti Zaidan', verified_role: 'Ketua Unit Kawalan Infeksi', verified_date: '',
     status: 'Draf'
@@ -2568,7 +2946,7 @@ function mnBlank(tpl){
 function mnPlain(data){ return JSON.parse(JSON.stringify(data, (k, v)=>k.charAt(0) === '_' ? undefined : v)); }
 function mnNewItem(title){
   const d = minitDefaultContent({ title, subs: [] });
-  return { title, subs: [], content: d.content, tindakan: d.tindakan, figures: [] };
+  return { title, subs: [], content: d.content, tindakan: d.tindakan, figures: [], slides: [] };
 }
 function mnSet(key, val){ MN.data[key] = val; mnDirty(); }
 function mnDirty(){
@@ -2576,6 +2954,9 @@ function mnDirty(){
   ['mnSaveState','mnSaveState2'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = 'Belum disimpan'; });
   clearTimeout(mnBackupTimer);
   mnBackupTimer = setTimeout(()=>{ try{ localStorage.setItem(MN_BACKUP_KEY, JSON.stringify({ id: MN.id, data: mnPlain(MN.data), ts: Date.now() })); }catch(e){} }, 800);
+  // autosave to Google Drive 20 s after the last change
+  clearTimeout(mnAutoTimer);
+  mnAutoTimer = setTimeout(()=>{ if(MN && mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Disimpan automatik', 'info'); }); }, 20000);
 }
 function mnSetSaveState(t){ ['mnSaveState','mnSaveState2'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = t; }); }
 function mnClearBackup(){ try{ localStorage.removeItem(MN_BACKUP_KEY); }catch(e){} }
@@ -2631,7 +3012,7 @@ async function mnCreate(tpl){
   data.meeting_time = document.getElementById('nm_time').value;
   data.venue = document.getElementById('nm_venue').value;
   data.items = MN_TEMPLATES[tpl].sessions.map(mnNewItem);
-  MN = { id: null, data }; MN_DECK = null;
+  MN = { id: null, data }; mnNormalize();
   document.getElementById('nm_go').disabled = true;
   closeModal();
   mnOpenHome();
@@ -2640,21 +3021,25 @@ async function mnCreate(tpl){
 function mnRestoreBackup(){
   const b = mnReadBackup(); if(!b) return;
   MN = { id: b.id || null, data: Object.assign(mnBlank(), b.data) };
-  MN.data.items.forEach(it=>{ it.figures = it.figures || []; });
+  mnNormalize();
   mnOpenHome(); mnSetSaveState('Dipulihkan — belum disimpan');
 }
 async function mnOpen(id){
   const res = await apiGet('getMinit', { minit_id: id });
   if(!res.success){ alert('Gagal buka minit: ' + (res.message||'')); return; }
   MN = { id, data: Object.assign(mnBlank(), res.data.minit || {}) };
-  MN.data.items.forEach(it=>{ it.figures = it.figures || []; });
-  MN_DECK = null;
+  mnNormalize();
   mnOpenHome(); mnSetSaveState('Disimpan');
 }
 async function mnDelete(id){
   if(!confirm('Padam minit ini? Fail Word dalam Drive tidak dipadam.')) return;
   await apiPost('deleteMinit', { minit_id: id });
   loadMinits();
+}
+function mnNormalize(){
+  Object.keys(MN_DECK_DOCS).forEach(k=>delete MN_DECK_DOCS[k]);
+  MN.data.absent = MN.data.absent || [];
+  MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; });
 }
 function mnBackToList(){
   const st = document.getElementById('mnSaveState').textContent;
@@ -2688,6 +3073,7 @@ function mnRenderHome(){
     <button class="at-link" onclick="mnEditHead()">Ubah</button>`;
   mnRenderAttendance();
   mnRenderSessions();
+  mnRenderDeck();
   document.getElementById('mn_pby').value = d.prepared_by || '';
   document.getElementById('mn_prole').value = d.prepared_role || '';
   document.getElementById('mn_vby').value = d.verified_by || '';
@@ -2716,12 +3102,26 @@ function mnSaveHead(){
 
 /* ---------- attendance ---------- */
 function mnRenderAttendance(){
-  const att = MN.data.attendees || [];
-  document.getElementById('mnAttCount').textContent = att.length || '';
+  const att = MN.data.attendees || [], abs = MN.data.absent || [];
+  document.getElementById('mnAttCount').textContent = att.length ? att.length + ' hadir' : '';
+  document.getElementById('mnAbsCount').textContent = abs.length ? '(' + abs.length + ')' : '';
+  document.getElementById('mnAttChoices').style.display = att.length ? 'none' : '';
   document.getElementById('mnAttPreview').innerHTML = att.length
-    ? `<div class="mn-chips">${att.slice(0,8).map(a=>`<span class="mn-chip">${mnEsc(a.name)}</span>`).join('')}${att.length > 8 ? `<span class="mn-chip">+${att.length-8} lagi</span>` : ''}</div>
-       <button class="at-link" style="margin-top:8px;" onclick="mnEditAttendance()">Lihat / ubah senarai</button>`
-    : '<div class="mn-help" style="margin:0;">Belum ada. Upload senarai kehadiran (PDF atau gambar), atau import dari tab Hadir.</div>';
+    ? `<div class="mn-chips">${att.slice(0,10).map(a=>`<span class="mn-chip">${mnEsc(a.name)}</span>`).join('')}${att.length > 10 ? `<span class="mn-chip">+${att.length-10} lagi</span>` : ''}</div>
+       ${abs.length ? `<div class="mn-help" style="margin:8px 0 0;">Tidak hadir dengan maaf: ${abs.map(a=>mnEsc(a.name)).join(', ')}</div>` : ''}
+       <div class="mn-row" style="margin-top:10px;"><button class="btn secondary small" onclick="mnEditAttendance()">Lihat / ubah senarai</button>
+       <label class="btn secondary small mn-filebtn">Upload senarai lain<input type="file" accept="application/pdf,.pdf,image/*" onchange="mnUploadAttendance(this)"></label></div>`
+    : '';
+}
+function mnEditAbsent(){
+  openModal(`<h3>Tidak hadir dengan maaf</h3>
+    <div class="mn-help" style="margin:0 0 8px;">Satu orang setiap baris: <strong>Nama | Jawatan</strong>.</div>
+    <textarea id="eab_text" class="mn-review" style="min-height:140px;" placeholder="Dr Mohd Yusof bin Mahidin | Ketua Jabatan Orthopedik">${mnEsc(mnAttText(MN.data.absent))}</textarea>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" onclick="mnSaveAbsent()">Simpan</button></div>`);
+}
+function mnSaveAbsent(){
+  MN.data.absent = mnParseAttLines(document.getElementById('eab_text').value);
+  closeModal(); mnDirty(); mnRenderAttendance();
 }
 function mnAttText(list){ return (list||[]).map(a=>a.name + (a.role ? ' | ' + a.role : '')).join('\n'); }
 function mnParseAttLines(text){
@@ -2742,6 +3142,7 @@ function mnSaveAttendance(){
   const seen = new Set();
   MN.data.attendees = mnParseAttLines(document.getElementById('ea_text').value).filter(a=>{ const k = a.name.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; });
   closeModal(); mnDirty(); mnRenderAttendance();
+  showToast('✓ Senarai kehadiran dikemas kini (' + MN.data.attendees.length + ' orang)');
 }
 // Turns OCR/PDF text of a sign-in sheet into "Nama | Jawatan" lines for review.
 function mnAttendanceFromText(text){
@@ -2750,7 +3151,11 @@ function mnAttendanceFromText(text){
   String(text||'').split('\n').forEach(raw=>{
     let l = raw.replace(/\s+$/,'').replace(/^\s*\d{1,3}\s*[\.\)]?\s+/,'').trim();
     if(!l || skip.test(l)) return;
-    const cols = l.split(/\s{2,}|\t|\|/).map(c=>c.trim()).filter(Boolean);
+    let cols = l.split(/\s{2,}|\t|\|/).map(c=>c.trim()).filter(Boolean);
+    if(cols.length === 1){
+      const m = cols[0].match(/^(.{4,}?)\s+((?:Ketua|Pegawai|Jururawat|Pakar|Penyelia|Pengarah|Timbalan|Pembantu|Penolong|Pengurus|Juru|Head|Supervisor|Matron|Sister|Medical|Infection|Eksekutif|Wakil|Pensyarah|Setiausaha|Ahli|Pengerusi|Doktor|Staff|Staf|HO|MO|PPK|PPP|JM|JT|SN)\b.*)$/);
+      if(m) cols = [m[1].trim(), m[2].trim()];
+    }
     const name = cols[0] || '';
     const words = name.split(/\s+/).filter(w=>/[A-Za-z]{2,}/.test(w));
     if(words.length < 2 && !/^(dr|pn|en|cik|tn|prof|puan|encik)\b/i.test(name)) return;
@@ -2825,9 +3230,9 @@ function mnRenderSessions(){
   document.getElementById('mnSessMore').style.display = items.length ? '' : 'none';
   document.getElementById('mnSessList').innerHTML = items.map((it, i)=>{
     const filled = (it.content||'').trim().length > 0 && !/______/.test(it.content);
-    const slides = (it._src||[]).reduce((n,s)=>n + s.pages.length, 0);
+    const slides = (it.slides||[]).length;
     const bits = [];
-    if(slides) bits.push(slides + ' slaid');
+    if(slides) bits.push(slides + ' slaid ditanda');
     if((it.figures||[]).length) bits.push(it.figures.length + ' rajah');
     if((it.tindakan||'').trim()) bits.push('Tindakan: ' + it.tindakan.trim());
     return `<button class="mn-sess" onclick="mnOpenSess(${i})">
@@ -2867,100 +3272,200 @@ function mnApplyAgenda(){
     return { title: p.title, subs: p.subs, content: d.content, tindakan: d.tindakan, figures: [] };
   });
   if(!items.some(it=>/penutup/i.test(it.title))) items.push(mnNewItem('Penutup'));
-  MN.data.items = items;
+  MN.data.items = minitOrderItems(items);
   closeModal(); mnDirty(); mnRenderSessions();
-  if(MN_DECK) mnMapDeck();
+  showToast('✓ ' + items.length + ' sesi disediakan');
 }
 function mnUseTemplate(key){
   MN.data.items = MN_TEMPLATES[key].sessions.map(mnNewItem);
   mnDirty(); mnRenderSessions();
 }
 function mnAddItem(){
-  MN.data.items.push(mnNewItem('Sesi baru'));
-  mnDirty(); mnOpenSess(MN.data.items.length - 1);
+  // new sessions go before "Penutup"
+  const arr = MN.data.items, k = arr.findIndex(it=>/^\s*penutup/i.test(it.title||''));
+  const at = k >= 0 ? k : arr.length;
+  arr.splice(at, 0, mnNewItem('Sesi baru'));
+  mnDirty(); mnOpenSess(at);
+  setTimeout(()=>{ const t = document.getElementById('ms_title'); if(t){ t.focus(); t.select(); } }, 50);
 }
 
-/* ---------- one PDF for the whole meeting (optional) ---------- */
-async function mnLoadPdfSource(file, onStatus){
-  const pdfjs = await mnEnsurePdfJs();
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-  const pages = [];
-  for(let n=1;n<=doc.numPages;n++){
-    if(onStatus && n % 5 === 1) onStatus(`Membaca slaid ${n}/${doc.numPages}…`);
-    pages.push({ num: n, text: mnPageText(await (await doc.getPage(n)).getTextContent()), thumb: '' });
+/* ---------- slides: uploaded ONCE for the whole meeting ----------
+   MN.data.deck = { files:[name], pages:[{ num, file, page, text, thumb }] }
+   Text and small thumbnails are saved with the minute, so ticking still
+   works after the minute is reopened. The full PDF stays on this device
+   only (needed just to put slide pictures into the Word file). */
+function mnDeck(){ return MN.data.deck && MN.data.deck.pages ? MN.data.deck : null; }
+function mnRenderDeck(){
+  const box = document.getElementById('mnDeckBox'); if(!box) return;
+  const deck = mnDeck();
+  document.getElementById('mnDeckCount').textContent = deck ? deck.pages.length + ' slaid' : '';
+  if(!deck){
+    box.innerHTML = `<div class="mn-choices"><label class="mn-choice mn-filebtn">
+        <span class="mn-choice-ico">🖥️</span>
+        <span class="mn-choice-txt"><strong>Upload slaid pembentangan</strong><small>PDF slaid (boleh lebih dari satu fail) atau gambar slaid</small></span>
+        <input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="mnDeckUpload(this)">
+      </label></div>`;
+    return;
   }
-  return { kind: 'pdf', name: file.name, doc, pages };
-}
-async function mnFillThumbs(src, onStatus, onEach){
-  for(const p of src.pages){
-    if(p.thumb) continue;
-    onStatus && onStatus(`Menyediakan gambar kecil ${p.num}/${src.pages.length}…`);
-    p.thumb = (await mnRenderPdfPage(src.doc, p.num, 280, 0.7)).dataUrl;
-    onEach && onEach();
-  }
-  onStatus && onStatus('');
+  const used = {};
+  (MN.data.items||[]).forEach((it, i)=>(it.slides||[]).forEach(n=>{ (used[n] = used[n] || []).push(i+1); }));
+  const nUsed = Object.keys(used).length;
+  box.innerHTML = `
+    <div class="mn-deck-files">${deck.files.map((f, fi)=>`<span class="mn-chip">📎 ${mnEsc(f)}${MN_DECK_DOCS[fi] ? '' : ' <em title="Fail asal tiada dalam peranti ini — upload semula jika mahu masukkan gambar slaid">(teks sahaja)</em>'}</span>`).join('')}</div>
+    <div class="mn-help" style="margin:8px 0 6px;">${nUsed} daripada ${deck.pages.length} slaid sudah ditanda dalam sesi.</div>
+    <div class="mn-thumbs">${deck.pages.map(p=>`<div class="mn-thumb ${used[p.num] ? 'picked' : ''}">
+        ${p.thumb ? `<img src="${p.thumb}" alt="Slaid ${p.num}" onclick="mnZoomDeck(${p.num})">` : `<div class="mn-thumb-ph" onclick="mnZoomDeck(${p.num})">${p.num}</div>`}
+        <label>Slaid ${p.num}${used[p.num] ? ' · sesi ' + used[p.num].join(',') : ''}</label></div>`).join('')}</div>
+    <div class="mn-row" style="margin-top:8px;">
+      <label class="btn secondary small mn-filebtn">+ Tambah fail slaid<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="mnDeckUpload(this)"></label>
+      <button class="btn secondary small" onclick="mnDeckRemove()">Buang semua slaid</button>
+    </div>`;
 }
 async function mnDeckUpload(input){
-  const file = input.files && input.files[0]; input.value = '';
-  if(!file) return;
-  if(!MN.data.items.length){ alert('Masukkan agenda dahulu — slaid akan diagihkan ikut sesi.'); return; }
-  const prog = document.getElementById('mnDeckProgress');
-  const say = t=>{ prog.textContent = t; };
+  const files = Array.from(input.files || []); input.value = '';
+  if(!files.length) return;
+  const prog = document.getElementById('mnDeckProgress') || document.getElementById('msProg');
+  const say = t=>{ const el = document.getElementById('mnDeckProgress'); if(el) el.textContent = t; const e2 = document.getElementById('msProg'); if(e2) e2.textContent = t; };
+  const deck = MN.data.deck = mnDeck() || { files: [], pages: [] };
   try{
-    MN_DECK = await mnLoadPdfSource(file, say);
-    mnMapDeck();
-    say(`✓ ${MN_DECK.pages.length} slaid diagihkan ke sesi. Buka sesi untuk semak.`);
-    mnFillThumbs(MN_DECK, null, ()=>{});
-  }catch(err){ say(''); alert('Gagal membaca PDF: ' + err.message); }
+    const pdfs = files.filter(f=>/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name));
+    const imgs = files.filter(f=>pdfs.indexOf(f) < 0);
+    for(const f of pdfs){
+      const fi = deck.files.length; deck.files.push(f.name);
+      const pdfjs = await mnEnsurePdfJs();
+      const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
+      MN_DECK_DOCS[fi] = { kind: 'pdf', doc };
+      for(let n=1;n<=doc.numPages;n++){
+        say(`Membaca ${f.name}: slaid ${n}/${doc.numPages}…`);
+        const pg = await doc.getPage(n);
+        const text = mnPageText(await pg.getTextContent());
+        const thumb = (await mnRenderPdfPage(doc, n, 220, 0.6)).dataUrl;
+        deck.pages.push({ num: deck.pages.length + 1, file: fi, page: n, text, thumb });
+      }
+    }
+    if(imgs.length){
+      const fi = deck.files.length; deck.files.push(imgs.length === 1 ? imgs[0].name : imgs.length + ' gambar slaid');
+      const store = MN_DECK_DOCS[fi] = { kind: 'img', full: {} };
+      for(let k=0;k<imgs.length;k++){
+        say(`Memproses gambar ${k+1}/${imgs.length}…`);
+        const url = await mnFileToDataUrl(imgs[k]);
+        const full = await mnScaleImage(url, 1600, 0.85), thumb = await mnScaleImage(url, 220, 0.6);
+        if(!full) continue;
+        store.full[k+1] = full;
+        deck.pages.push({ num: deck.pages.length + 1, file: fi, page: k+1, text: '', thumb: thumb.dataUrl });
+      }
+    }
+    say('');
+    mnDirty(); mnRenderDeck();
+    if(MN_SESS >= 0) mnRenderSess(); else mnRenderSessions();
+    showToast('✓ ' + deck.pages.length + ' slaid sedia — buka setiap sesi dan tick slaid yang berkaitan');
+  }catch(err){ say(''); alert('Gagal membaca slaid: ' + err.message); }
 }
-function mnMapDeck(){
-  const map = minitMapSlides(MN.data.items.map(it=>({ title: it.title, subs: it.subs||[] })), MN_DECK.pages);
-  MN.data.items.forEach((it, i)=>{
-    it._src = (it._src||[]).filter(s=>s.fromDeck !== true);
-    if(map[i].length) it._src.unshift({ kind: 'pdf', name: MN_DECK.name, doc: MN_DECK.doc, fromDeck: true, pages: map[i].map(n=>MN_DECK.pages[n-1]) });
-  });
-  mnRenderSessions();
+function mnDeckRemove(){
+  if(!confirm('Buang semua slaid? Tanda slaid dalam setiap sesi juga akan dibuang (nota yang sudah dijana kekal).')) return;
+  MN.data.deck = null; Object.keys(MN_DECK_DOCS).forEach(k=>delete MN_DECK_DOCS[k]);
+  MN.data.items.forEach(it=>{ it.slides = []; });
+  mnDirty(); mnRenderDeck(); mnRenderSessions();
+}
+async function mnSlideImage(num, width){
+  const p = mnDeck().pages.find(x=>x.num === num); if(!p) return null;
+  const src = MN_DECK_DOCS[p.file];
+  if(!src) return null;
+  if(src.kind === 'img') return src.full[p.page] || null;
+  return await mnRenderPdfPage(src.doc, p.page, width || 1400, 0.85);
+}
+async function mnZoomDeck(num){
+  const p = mnDeck().pages.find(x=>x.num === num);
+  openModal(`<h3>Slaid ${num}</h3><div class="mn-zoom">${p.thumb ? `<img src="${p.thumb}" alt="">` : ''}</div>
+    ${p.text ? `<details class="mn-tips" style="margin-top:10px;"><summary>Teks dalam slaid</summary><pre class="mn-slide-text">${mnEsc(p.text)}</pre></details>` : ''}
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Tutup</button></div>`);
+  const big = await mnSlideImage(num, 1100);
+  const z = document.querySelector('#modalBody .mn-zoom');
+  if(big && z) z.innerHTML = `<img src="${big.dataUrl}" alt="">`;
 }
 
 /* ---------- session ---------- */
 function mnOpenSess(i){
-  MN_SESS = i;
+  MN_SESS = i; MN_SLIDE_FILTER = 'all';
   mnShow('mnSessView');
   mnRenderSess();
 }
 function mnUnsaved(){ return /Belum/.test(document.getElementById('mnSaveState').textContent); }
 function mnCloseSess(){
-  MN_SESS = -1; mnShow('mnHomeView'); mnRenderSessions();
-  if(mnUnsaved()) mnSave(true); // keep the draft on the server as soon as a session is done
+  MN_SESS = -1; mnShow('mnHomeView'); mnRenderSessions(); mnRenderDeck();
+  if(mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Sesi disimpan'); });
 }
 function mnGoSess(delta){
   const j = MN_SESS + delta;
   if(j < 0 || j >= MN.data.items.length){ if(delta > 0) mnCloseSess(); return; }
-  if(mnUnsaved()) mnSave(true);
+  if(mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Sesi ' + (MN_SESS - delta + 1) + ' disimpan', 'info'); });
   mnOpenSess(j);
 }
 async function mnSessSave(){
-  if(await mnSave(true)) mnSetSaveState('Draf disimpan ✓');
+  if(await mnSave(true)) showToast('✓ Minit disimpan — ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
+}
+async function mnSaveClick(){
+  if(await mnSave(true)) showToast('✓ Minit disimpan — ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
 }
 function mnSetItem(key, val){ MN.data.items[MN_SESS][key] = val; mnDirty(); }
-function mnFigKey(src, num){ return src.name + '#' + num; }
+
+// phrases commonly used in UKI minutes
+const MN_PHRASES = [
+  'Mesyuarat dimaklumkan bahawa ', 'Ahli mesyuarat dimaklumkan bahawa ', 'Mesyuarat mengambil maklum ', 'Mesyuarat bersetuju ',
+  'Mesyuarat memutuskan ', 'Pengerusi mencadangkan ', 'Pengerusi mengarahkan ', 'Pemantauan UKI mendapati ',
+  'Audit menunjukkan ', 'Antaranya:\n- ', 'Oleh yang demikian, ', 'Cadangan ', 'Perbincangan dalaman akan dilakukan oleh ',
+  'Sila rujuk minit mesyuarat bil ', '*(rujuk slaid pembentangan yang dilampirkan)*'
+];
+const MN_VERBS = ['memaklumkan bahawa ', 'membentangkan ', 'mencadangkan ', 'menyarankan ', 'bertanya ', 'bersetuju '];
+const MN_TINDAKAN = ['Makluman', 'Unit Kawalan Infeksi', 'PJ/KJ Wad', 'Ketua Jabatan', 'Supervisor Cleansing / Radicare', 'Semua'];
+let MN_SLIDE_FILTER = 'all';
 function mnRenderSess(){
   const i = MN_SESS, it = MN.data.items[i], n = MN.data.items.length;
+  it.slides = it.slides || [];
   document.getElementById('mnSessPos').textContent = `Sesi ${i+1} daripada ${n}`;
   document.getElementById('msPrev').disabled = i === 0;
   document.getElementById('msNext').textContent = i < n-1 ? 'Seterusnya ›' : 'Selesai ✓';
-  const srcs = it._src || [];
-  const picked = new Set((it.figures||[]).map(f=>f.key));
-  const srcHtml = srcs.map((s, si)=>`
-    <div class="mn-src-name">${mnEsc(s.name)}${s.fromDeck ? ' (dipadankan automatik)' : ''} · ${s.pages.length} ${s.kind === 'img' ? 'gambar' : 'slaid'}
-      <button class="at-link memo-del" style="font-size:12px;padding:0 0 0 6px;" onclick="mnRemoveSrc(${si})">Buang</button></div>
-    <div class="mn-thumbs">${s.pages.map(p=>{
-      const key = mnFigKey(s, p.num);
-      return `<div class="mn-thumb ${picked.has(key)?'picked':''}">
-        <img ${p.thumb ? `src="${p.thumb}"` : ''} alt="${mnEsc(s.kind === 'img' ? s.name : 'Slaid ' + p.num)}" onclick="mnZoom(${si},${p.num})">
-        <label><input type="checkbox" ${picked.has(key)?'checked':''} onchange="mnToggleFig(${si},${p.num},this)"> ${s.kind === 'img' ? '' : 'Slaid ' + p.num + ' · '}masuk minit</label>
-      </div>`; }).join('')}</div>`).join('');
+  const deck = mnDeck();
+  const ticked = new Set(it.slides);
+  const otherUse = {};
+  MN.data.items.forEach((x, k)=>{ if(k !== i) (x.slides||[]).forEach(nm=>{ (otherUse[nm] = otherUse[nm] || []).push(k+1); }); });
+  // suggestions: slides whose text matches this session's title
+  let suggest = new Set();
+  if(deck){
+    try{
+      const map = minitMapSlides(MN.data.items.map(x=>({ title: x.title, subs: x.subs||[] })), deck.pages.map(p=>({ num: p.num, text: p.text })));
+      suggest = new Set(map[i] || []);
+    }catch(e){}
+  }
+  let pages = deck ? deck.pages : [];
+  if(MN_SLIDE_FILTER === 'ticked') pages = pages.filter(p=>ticked.has(p.num));
+  if(MN_SLIDE_FILTER === 'free') pages = pages.filter(p=>!otherUse[p.num]);
+  const slideHtml = !deck ? `
+      <div class="mn-help" style="margin:0 0 10px;">Belum ada slaid. Upload sekali untuk seluruh mesyuarat — selepas itu tick slaid yang berkaitan dalam setiap sesi.</div>
+      <label class="btn small mn-filebtn">Upload slaid pembentangan (PDF/gambar)<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="mnDeckUpload(this)"></label>`
+    : `
+      <div class="mn-slidebar">
+        <div class="seg mn-seg-sm">
+          <button class="${MN_SLIDE_FILTER==='all'?'active':''}" onclick="mnSlideFilter('all')">Semua (${deck.pages.length})</button>
+          <button class="${MN_SLIDE_FILTER==='ticked'?'active':''}" onclick="mnSlideFilter('ticked')">Ditanda (${ticked.size})</button>
+          <button class="${MN_SLIDE_FILTER==='free'?'active':''}" onclick="mnSlideFilter('free')">Belum guna</button>
+        </div>
+        ${suggest.size ? `<button class="at-link" onclick="mnTickSuggested()">Tick cadangan (${suggest.size})</button>` : ''}
+      </div>
+      <div class="mn-pick">${pages.map(p=>`
+        <div class="mn-pick-card ${ticked.has(p.num)?'on':''}" onclick="mnTickSlide(${p.num})" role="checkbox" aria-checked="${ticked.has(p.num)}" tabindex="0" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();mnTickSlide(${p.num})}">
+          ${p.thumb ? `<img src="${p.thumb}" alt="Slaid ${p.num}">` : `<div class="mn-thumb-ph">${p.num}</div>`}
+          <span class="mn-pick-box" aria-hidden="true">${ticked.has(p.num) ? '✓' : ''}</span>
+          <span class="mn-pick-cap">Slaid ${p.num}${suggest.has(p.num) ? ' <b class="mn-sug">cadangan</b>' : ''}${otherUse[p.num] ? ` <i>sesi ${otherUse[p.num].join(',')}</i>` : ''}</span>
+          <button class="mn-pick-zoom" onclick="event.stopPropagation();mnZoomDeck(${p.num})" aria-label="Besarkan slaid ${p.num}">⤢</button>
+        </div>`).join('') || '<div class="mn-help">Tiada slaid dalam paparan ini.</div>'}</div>
+      <div class="mn-row" style="margin-top:12px;">
+        <button class="btn small" onclick="mnGenSentences()" ${ticked.size ? '' : 'disabled'}>✍️ Jana ayat dari ${ticked.size || ''} slaid ditanda</button>
+        ${MN_AI ? `<button class="btn secondary small" onclick="mnDraftAi()" ${ticked.size ? '' : 'disabled'}>✨ Draf AI</button>` : ''}
+      </div>
+      <label class="mn-check"><input type="checkbox" ${it.attach_images ? 'checked' : ''} onchange="mnSetItem('attach_images', this.checked)"><span>Masukkan juga <strong>gambar</strong> slaid ditanda dalam minit (biasanya tidak perlu — cukup ayat + "rujuk slaid")</span></label>`;
   const figs = it.figures || [];
+  const people = (MN.data.attendees||[]).map(a=>a.name).filter(Boolean);
   document.getElementById('mnSessBody').innerHTML = `
     <input class="mn-sess-title" id="ms_title" value="${mnEsc(it.title)}" oninput="mnSetItem('title', this.value)" aria-label="Tajuk sesi">
     <div class="mn-sess-tools">
@@ -2970,15 +3475,10 @@ function mnRenderSess(){
     </div>
 
     <section class="mn-block">
-      <div class="mn-block-head"><h2>Slaid &amp; data</h2></div>
-      <div class="mn-row">
-        <span class="btn secondary small mn-filebtn">Upload slaid (PDF/gambar)<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="mnSessUpload(this)"></span>
-        <button class="btn secondary small" onclick="mnDraftLocal()" ${srcs.length ? '' : 'disabled'}>Draf dari slaid</button>
-        ${MN_AI ? `<button class="btn secondary small" onclick="mnDraftAi()" ${srcs.length ? '' : 'disabled'}>✨ Draf AI</button>` : ''}
-      </div>
+      <div class="mn-block-head"><h2>Slaid untuk perkara ini ${ticked.size ? `<span class="mn-count">${ticked.size} ditanda</span>` : ''}</h2></div>
       <div id="msProg" class="mn-progress"></div>
-      ${srcs.length ? srcHtml : '<div class="mn-help" style="margin:0;">Upload slaid pembentang untuk sesi ini. Tanda slaid yang ada graf/jadual untuk dimasukkan dalam minit, dan tekan "Draf dari slaid" untuk ambil tarikh &amp; data penting ke dalam nota.</div>'}
-      ${figs.length ? `<div class="mn-src-name" style="margin-top:10px;">Rajah dalam minit (${figs.length})</div>
+      ${slideHtml}
+      ${figs.length ? `<div class="mn-src-name" style="margin-top:12px;">Rajah lama dalam minit (${figs.length})</div>
         <div class="mn-figs">${figs.map((f, fi)=>`<div class="mn-fig">${f.thumb ? `<img src="${f.thumb}" alt="${mnEsc(f.caption)}">` : ''}
           <input value="${mnEsc(f.caption)}" oninput="mnSetFigCaption(${fi}, this.value)" aria-label="Kapsyen rajah ${fi+1}">
           <button class="at-link memo-del" style="font-size:12px;padding:0;" onclick="mnRemoveFig(${fi})">Buang dari minit</button></div>`).join('')}</div>` : ''}
@@ -2986,16 +3486,80 @@ function mnRenderSess(){
 
     <section class="mn-block">
       <div class="mn-block-head"><h2>Nota perbincangan</h2></div>
-      <textarea class="mn-content" id="ms_content" oninput="mnSetItem('content', this.value)" placeholder="- Mesyuarat dimaklumkan bahawa…">${mnEsc(it.content||'')}</textarea>
+      <div class="mn-help" style="margin:-2px 0 8px;">Tekan ayat untuk masukkan di tempat kursor.</div>
+      <div class="mn-phrases">${MN_PHRASES.map((p, k)=>`<button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertPhrase(${k})">${mnEsc(p.replace(/\*/g,'').replace(/\n- $/,'').trim())}</button>`).join('')}
+        ${people.length ? `<button type="button" class="mn-phrase who" onmousedown="event.preventDefault()" onclick="mnPickPerson()">👤 Nama ahli…</button>` : ''}
+        <button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertText('\\n## ')">+ Subtajuk</button>
+        <button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertText('\\n- ')">• Poin</button>
+        <button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertText('\\nTindakan: ')">Tindakan di sini</button>
+      </div>
+      <textarea class="mn-content" id="ms_content" oninput="mnSetItem('content', this.value)" placeholder="Mesyuarat dimaklumkan bahawa…">${mnEsc(it.content||'')}</textarea>
       <details class="mn-tips"><summary>Cara format</summary>
-        <div style="margin-top:6px;line-height:1.7;"><strong>## 3.1 Subtajuk</strong> · <strong>- poin</strong> · <strong>&nbsp;&nbsp;- sub-poin</strong> (2 ruang depan) · <strong>**tebal**</strong> · <strong>*italik*</strong> · baris <strong>Tindakan: Unit X</strong> untuk tindakan di tengah nota.</div>
+        <div style="margin-top:6px;line-height:1.7;"><strong>## Subtajuk</strong> (jadi ${i+1}.1, ${i+1}.2 … dalam minit) · <strong>- poin</strong> · <strong>&nbsp;&nbsp;- sub-poin</strong> (2 ruang depan) · <strong>**tebal**</strong> · <strong>*italik*</strong> · baris <strong>Tindakan: Unit X</strong> untuk tindakan di tengah nota.</div>
       </details>
     </section>
 
     <section class="mn-block">
-      <div class="field" style="margin:0;"><label for="ms_tindakan">Tindakan (akhir sesi)</label>
-        <input id="ms_tindakan" value="${mnEsc(it.tindakan||'')}" placeholder="cth. Makluman / Unit Kejuruteraan" oninput="mnSetItem('tindakan', this.value)"></div>
+      <div class="field" style="margin:0;"><label for="ms_tindakan">Tindakan (akhir perkara)</label>
+        <input id="ms_tindakan" value="${mnEsc(it.tindakan||'')}" placeholder="cth. Makluman / Unit Kawalan Infeksi & PJ/KJ Wad 7" oninput="mnSetItem('tindakan', this.value)"></div>
+      <div class="mn-phrases" style="margin-top:8px;">${MN_TINDAKAN.map(t=>`<button type="button" class="mn-phrase" onclick="mnAddTindakan('${mnEsc(t)}')">${mnEsc(t)}</button>`).join('')}</div>
     </section>`;
+}
+function mnSlideFilter(f){ MN_SLIDE_FILTER = f; mnRenderSessKeepScroll(); }
+function mnRenderSessKeepScroll(){ const y = window.scrollY; mnRenderSess(); window.scrollTo(0, y); }
+function mnTickSlide(num){
+  const it = MN.data.items[MN_SESS];
+  const k = it.slides.indexOf(num);
+  if(k >= 0) it.slides.splice(k, 1); else { it.slides.push(num); it.slides.sort((a,b)=>a-b); }
+  mnDirty(); mnRenderSessKeepScroll();
+}
+function mnTickSuggested(){
+  const it = MN.data.items[MN_SESS], deck = mnDeck();
+  const map = minitMapSlides(MN.data.items.map(x=>({ title: x.title, subs: x.subs||[] })), deck.pages.map(p=>({ num: p.num, text: p.text })));
+  (map[MN_SESS]||[]).forEach(nm=>{ if(it.slides.indexOf(nm) < 0) it.slides.push(nm); });
+  it.slides.sort((a,b)=>a-b); mnDirty(); mnRenderSessKeepScroll();
+}
+// insert text at the cursor in the notes box
+function mnInsertText(text){
+  const ta = document.getElementById('ms_content'); if(!ta) return;
+  const a = ta.selectionStart != null ? ta.selectionStart : ta.value.length, b = ta.selectionEnd != null ? ta.selectionEnd : a;
+  let t = text;
+  const before = ta.value.slice(0, a);
+  if(/^\n/.test(t) && (!before || /\n$/.test(before))) t = t.slice(1);                 // no blank line at the start
+  else if(!/^\n/.test(t) && before && !/[\s(]$/.test(before)) t = ' ' + t;
+  ta.value = before + t + ta.value.slice(b);
+  const pos = a + t.length;
+  ta.focus(); ta.setSelectionRange(pos, pos);
+  mnSetItem('content', ta.value);
+}
+function mnInsertPhrase(k){
+  const p = MN_PHRASES[k];
+  const ta = document.getElementById('ms_content');
+  const before = ta ? ta.value.slice(0, ta.selectionStart) : '';
+  // sentence starters begin on a new line when the box already has text
+  const starter = /^[A-Z(*]/.test(p) && before.trim() && !/\n\s*$/.test(before) && !/^\*\(/.test(p);
+  mnInsertText((starter ? '\n' : '') + p);
+}
+function mnPickPerson(){
+  const people = ['Pengerusi'].concat((MN.data.attendees||[]).map(a=>a.name).filter(Boolean));
+  openModal(`<h3>Siapa yang bercakap?</h3>
+    <div class="mn-person-list">${people.map((p, k)=>`<button class="mn-choice" onclick="mnPickPerson2(${k})"><span class="mn-choice-txt"><strong>${mnEsc(p)}</strong></span></button>`).join('')}</div>
+    <div class="field" style="margin-top:12px;"><label for="pp_verb">Diikuti dengan</label><select id="pp_verb">${MN_VERBS.map(v=>`<option>${mnEsc(v.trim())}</option>`).join('')}</select></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button></div>`);
+}
+function mnPickPerson2(k){
+  const name = (k === 0 ? 'Pengerusi' : MN.data.attendees[k-1].name).replace(/\s*\((pengerusi|chairperson)\)\s*/i,' ').trim();
+  const verb = document.getElementById('pp_verb').value;
+  closeModal();
+  const ta = document.getElementById('ms_content');
+  const before = ta ? ta.value.slice(0, ta.selectionStart) : '';
+  mnInsertText((before.trim() && !/\n\s*$/.test(before) ? '\n' : '') + name + ' ' + verb + ' ');
+}
+function mnAddTindakan(t){
+  const inp = document.getElementById('ms_tindakan');
+  const cur = inp.value.trim();
+  inp.value = !cur || cur === 'Makluman' || t === 'Makluman' ? t : cur + ' / ' + t;
+  mnSetItem('tindakan', inp.value);
 }
 function mnMoveSess(dir){
   const i = MN_SESS, j = i + dir, arr = MN.data.items;
@@ -3006,124 +3570,96 @@ function mnRemoveSess(){
   if(!confirm('Padam sesi "' + MN.data.items[MN_SESS].title + '"?')) return;
   MN.data.items.splice(MN_SESS, 1); mnDirty(); mnCloseSess();
 }
-async function mnSessUpload(input){
-  const files = Array.from(input.files || []); input.value = '';
-  if(!files.length) return;
-  const it = MN.data.items[MN_SESS];
-  const say = t=>{ const el = document.getElementById('msProg'); if(el) el.textContent = t; };
-  it._src = it._src || [];
-  try{
-    const imgs = files.filter(f=>!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name));
-    for(const f of files.filter(f=>/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name))){
-      const src = await mnLoadPdfSource(f, say);
-      it._src.push(src); mnRenderSess();
-      await mnFillThumbs(src, say, ()=>{ if(MN.data.items[MN_SESS] === it) mnRenderSessThumbsLater(); });
-    }
-    if(imgs.length){
-      const src = { kind: 'img', name: imgs.length === 1 ? imgs[0].name : imgs.length + ' gambar', doc: null, pages: [] };
-      for(let k=0;k<imgs.length;k++){
-        say(`Memproses gambar ${k+1}/${imgs.length}…`);
-        const url = await mnFileToDataUrl(imgs[k]);
-        const full = await mnScaleImage(url, 1600, 0.85), thumb = await mnScaleImage(url, 280, 0.7);
-        if(full) src.pages.push({ num: k+1, text: '', thumb: thumb.dataUrl, full, fileName: imgs[k].name });
-      }
-      it._src.push(src);
-    }
-    say(''); mnRenderSess(); mnRenderSessions();
-  }catch(err){ say(''); alert('Gagal memproses slaid: ' + err.message); }
-}
-let mnThumbTimer = null;
-function mnRenderSessThumbsLater(){ clearTimeout(mnThumbTimer); mnThumbTimer = setTimeout(()=>{ if(MN_SESS >= 0){ const y = window.scrollY; mnRenderSess(); window.scrollTo(0, y); } }, 400); }
-function mnRemoveSrc(si){ const it = MN.data.items[MN_SESS]; it._src.splice(si, 1); mnRenderSess(); }
-async function mnToggleFig(si, num, cb){
-  const it = MN.data.items[MN_SESS], src = it._src[si], key = mnFigKey(src, num);
-  it.figures = it.figures || [];
-  if(!cb.checked){ it.figures = it.figures.filter(f=>f.key !== key); mnDirty(); mnRenderSess(); return; }
-  cb.disabled = true;
-  const say = t=>{ const el = document.getElementById('msProg'); if(el) el.textContent = t; };
-  try{
-    say('Menyimpan rajah…');
-    const page = src.pages.find(p=>p.num === num);
-    const full = src.kind === 'img' ? page.full : await mnRenderPdfPage(src.doc, num, 1400, 0.85);
-    const thumb = page.thumb || (await mnScaleImage(full.dataUrl, 280, 0.7)).dataUrl;
-    const b64 = full.dataUrl.split(',')[1];
-    const up = await apiPost('uploadMinitFigure', { base64: b64, filename: 'rajah_' + Date.now() + '.jpg' });
-    if(!up.success) throw new Error(up.message || 'gagal simpan ke Drive');
-    MN_FIG_CACHE[up.data.id] = b64;
-    it.figures.push({ id: up.data.id, key, thumb, width: full.width, height: full.height,
-      caption: 'Rajah: ' + (src.kind === 'img' ? page.fileName : 'Slaid ' + num) });
-    say(''); mnDirty(); mnRenderSess();
-  }catch(err){ say(''); cb.checked = false; cb.disabled = false; alert('Gagal simpan rajah: ' + err.message); }
-}
 function mnSetFigCaption(fi, v){ MN.data.items[MN_SESS].figures[fi].caption = v; mnDirty(); }
 function mnRemoveFig(fi){ MN.data.items[MN_SESS].figures.splice(fi, 1); mnDirty(); mnRenderSess(); }
-async function mnZoom(si, num){
-  const src = MN.data.items[MN_SESS]._src[si];
-  openModal(`<h3>${mnEsc(src.kind === 'img' ? src.name : 'Slaid ' + num)}</h3><div class="mn-zoom"><div class="mn-progress">Memuatkan…</div></div>
-    <div class="mn-help" style="margin:10px 0 0;">Pastikan slaid yang dimasukkan dalam minit tiada nama atau maklumat pengenalan pesakit.</div>
-    <div class="modal-actions"><button class="btn" onclick="closeModal()">Tutup</button></div>`);
-  const page = src.pages.find(p=>p.num === num);
-  const img = src.kind === 'img' ? page.full.dataUrl : (await mnRenderPdfPage(src.doc, num, 1100, 0.85)).dataUrl;
-  const z = document.querySelector('#modalBody .mn-zoom');
-  if(z) z.innerHTML = `<img src="${img}" alt="">`;
-}
-function mnSessPages(){ return (MN.data.items[MN_SESS]._src||[]).flatMap(s=>s.pages); }
-function mnAppendContent(text){
+function mnTickedPages(it){ const deck = mnDeck(); return deck ? (it.slides||[]).map(n=>deck.pages.find(p=>p.num === n)).filter(Boolean) : []; }
+function mnAppendContent(text, replace){
   const it = MN.data.items[MN_SESS];
-  it.content = ((it.content||'').trim() ? it.content.trim() + '\n\n' : '') + String(text||'').trim();
+  it.content = replace ? String(text||'').trim() : ((it.content||'').trim() ? it.content.trim() + '\n\n' : '') + String(text||'').trim();
   const ta = document.getElementById('ms_content');
-  if(ta){ ta.value = it.content; ta.scrollTop = ta.scrollHeight; ta.focus(); }
+  if(ta){ ta.value = it.content; ta.scrollTop = ta.scrollHeight; }
   mnDirty();
 }
-function mnDraftLocal(){
+// slide text → sentences, shown for checking before it goes into the notes
+function mnGenSentences(style){
   const it = MN.data.items[MN_SESS];
-  const pages = mnSessPages().filter(p=>p.text);
-  if(!pages.length){ alert('Slaid ini tiada teks untuk dibaca (mungkin gambar sahaja). Tandakan slaid sebagai rajah, dan tulis nota secara manual.'); return; }
-  mnAppendContent(minitDraftFromSlides(it, pages));
+  const pages = mnTickedPages(it).filter(p=>p.text && p.text.trim());
+  if(!pages.length){ alert('Slaid yang ditanda tiada teks untuk dibaca (mungkin gambar sahaja). Tulis nota secara manual, atau tanda "Masukkan gambar slaid".'); return; }
+  style = style || 'dapatan';
+  const people = (MN.data.attendees||[]).map(a=>a.name.replace(/\s*\((pengerusi|chairperson)\)\s*/i,' ').trim()).filter(Boolean);
+  const presenter = (document.getElementById('gs_who') || {}).value || mnGenSentences._who || '';
+  mnGenSentences._who = presenter;
+  const text = minitSentencesFromSlides(it, pages, { style, presenter });
+  const hasNotes = !!(it.content||'').trim() && !/______/.test(it.content);
+  openModal(`<h3>Ayat dari ${pages.length} slaid</h3>
+    <div class="seg" style="margin-bottom:10px;">
+      <button class="${style==='dapatan'?'active':''}" onclick="mnGenSentences('dapatan')">Dapatan terperinci</button>
+      <button class="${style==='ringkas'?'active':''}" onclick="mnGenSentences('ringkas')">Ringkasan pembentangan</button>
+    </div>
+    ${style==='ringkas' ? `<div class="field"><label for="gs_who">Dibentangkan oleh</label><select id="gs_who" onchange="mnGenSentences('ringkas')"><option value="">(tiada nama)</option>${people.map(p=>`<option ${p===presenter?'selected':''}>${mnEsc(p)}</option>`).join('')}</select></div>` : ''}
+    <div class="mn-help" style="margin:0 0 8px;">Semak dan betulkan ayat sebelum masukkan. Baris yang kelihatan seperti nama/IC pesakit dibuang secara automatik.</div>
+    <textarea id="gs_text" class="mn-content" style="min-height:260px;">${mnEsc(text)}</textarea>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Batal</button>
+      ${hasNotes ? `<button class="btn secondary" onclick="mnUseSentences(true)">Ganti nota</button>` : ''}
+      <button class="btn" onclick="mnUseSentences(false)">${hasNotes ? 'Tambah ke nota' : 'Masukkan ke nota'}</button>
+    </div>`);
+}
+function mnUseSentences(replace){
+  const t = document.getElementById('gs_text').value;
+  closeModal();
+  const it = MN.data.items[MN_SESS];
+  // replace the template's blank default text
+  if(/______/.test(it.content||'') || /^Mesyuarat dimaklumkan berkenaan/i.test((it.content||'').trim())) replace = true;
+  mnAppendContent(t, replace);
+  showToast('✓ Ayat dimasukkan ke nota');
 }
 function mnDraftAi(){
   openModal(`<h3>Draf AI</h3>
-    <div class="mn-help" style="margin:0 0 10px;">Teks slaid sesi ini akan dihantar ke Google Gemini untuk dijadikan draf minit. Baris yang kelihatan seperti senarai pesakit dibuang secara automatik, tetapi sila pastikan sendiri.</div>
-    <label style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;"><input type="checkbox" id="mnAiOk" style="margin-top:3px;"> Saya sahkan slaid sesi ini tiada nama atau maklumat pengenalan pesakit.</label>
+    <div class="mn-help" style="margin:0 0 10px;">Teks slaid yang ditanda akan dihantar ke Google Gemini untuk dijadikan draf minit. Baris yang kelihatan seperti senarai pesakit dibuang secara automatik, tetapi sila pastikan sendiri.</div>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;"><input type="checkbox" id="mnAiOk" style="margin-top:3px;"> Saya sahkan slaid ini tiada nama atau maklumat pengenalan pesakit.</label>
     <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="mnAiGo" onclick="mnDoDraftAi()">Jana draf</button></div>`);
 }
 async function mnDoDraftAi(){
   if(!document.getElementById('mnAiOk').checked){ alert('Sila tanda pengesahan dahulu.'); return; }
   const btn = document.getElementById('mnAiGo'); btn.disabled = true; btn.textContent = 'Menjana…';
   const it = MN.data.items[MN_SESS];
-  const slideText = mnSessPages().map(p=>'[Slaid ' + p.num + ']\n' + minitSlideLines(p.text).filter(l=>!minitLooksLikePatientRow(l)).join('\n')).join('\n\n');
+  const slideText = mnTickedPages(it).map(p=>'[Slaid ' + p.num + ']\n' + minitCleanLines(p.text).join('\n')).join('\n\n');
   const res = await apiPost('aiDraftMinit', { title: it.title, subs: (it.subs||[]).map(s=>s.title), slideText, notes: (it.content||'').replace(/^##.*$/mg,'').trim().slice(0, 2000) });
   closeModal();
   if(!res.success){ alert(res.message || 'Draf AI gagal.'); return; }
   mnAppendContent(res.data.text || '');
+  showToast('✓ Draf AI dimasukkan ke nota');
 }
 
 /* ---------- save / preview / generate ---------- */
 async function mnSave(silent){
   if(!String(MN.data.title||'').trim()){ alert('Isi tajuk minit dahulu.'); return false; }
+  clearTimeout(mnAutoTimer);
   mnSetSaveState('Menyimpan…');
   const res = await apiPost('saveMinit', { minit_id: MN.id, minit: mnPlain(MN.data), created_by: currentUser() });
   if(!res.success){
-    mnSetSaveState('Gagal disimpan');
-    alert('Gagal simpan minit: ' + (res.message||'ralat tidak diketahui') + '\n\nSalinan sementara masih ada dalam peranti ini.');
+    mnSetSaveState('Belum disimpan — gagal');
+    showToast('✗ Gagal simpan: ' + (res.message||'cuba lagi'), 'err');
+    if(!silent) alert('Gagal simpan minit: ' + (res.message||'ralat tidak diketahui') + '\n\nSalinan sementara masih ada dalam peranti ini.');
     return false;
   }
   MN.id = res.data.minit_id;
-  mnSetSaveState('Disimpan');
+  mnSetSaveState('✓ Disimpan ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
   mnClearBackup();
   return true;
 }
-function mnContentHtml(content){
-  let html = '', inList = 0;
+function mnContentHtml(content, no){
+  let html = '', inList = 0, sub = 0;
   const close = ()=>{ while(inList>0){ html += '</ul>'; inList--; } };
   const inline = s=>mnEsc(s).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
   String(content||'').split('\n').forEach(raw=>{
     const line = raw.replace(/\s+$/,''); let m;
     if(!line.trim()) return;
-    if((m = line.match(/^##\s+(.*)$/))){ close(); html += `<p><strong>${inline(m[1])}</strong></p>`; return; }
+    if((m = line.match(/^##\s+(.*)$/))){ close(); let t = m[1].trim(); if(no && !/^\d+\.\d+/.test(t)){ sub++; t = no + '.' + sub + ' ' + t; } html += `<p class="pv-sub"><strong>${inline(t)}</strong></p>`; return; }
     if((m = line.match(/^(?:\s{2,}|\t)[-•o]\s+(.*)$/)) || (m = line.match(/^--\s+(.*)$/))){ if(inList < 2){ html += '<ul style="list-style:circle">'; inList = 2; } html += `<li>${inline(m[1])}</li>`; return; }
     if((m = line.match(/^[-•]\s+(.*)$/))){ if(inList === 2){ html += '</ul>'; inList = 1; } if(inList < 1){ html += '<ul>'; inList = 1; } html += `<li>${inline(m[1])}</li>`; return; }
-    if((m = line.match(/^tindakan\s*:\s*(.*)$/i))){ close(); html += `<div class="pv-tindakan">Tindakan : ${inline(m[1])}</div>`; return; }
+    if((m = line.match(/^tindakan\s*:\s*(.*)$/i))){ close(); html += `<div class="pv-tindakan">Tindakan: ${inline(m[1])}</div>`; return; }
     close(); html += `<p>${inline(line)}</p>`;
   });
   close();
@@ -3131,39 +3667,94 @@ function mnContentHtml(content){
 }
 function mnPreview(){
   const d = MN.data;
-  const title = ['HOSPITAL TENGKU PERMAISURI NORASHIKIN'].concat(String(d.title||'').split('\n')).map(mnEsc).join('<br>');
-  const att = (d.attendees||[]).map((a,i)=>`<tr><td>${i+1}. ${mnEsc(a.name)}</td><td>${mnEsc(a.role)}</td></tr>`).join('');
-  const rows = (d.items||[]).map((it,i)=>`<tr><td style="width:36px">${i+1}.</td><td><p><strong>${mnEsc(it.title)}</strong></p>${mnContentHtml(it.content)}
+  let tl = String(d.title||'').split('\n').map(t=>t.trim()).filter(Boolean);
+  if(!tl.some(t=>/TENGKU PERMAISURI NORASHIKIN/i.test(t))) tl.push('HOSPITAL TENGKU PERMAISURI NORASHIKIN');
+  const title = tl.map(t=>mnEsc(t.toUpperCase())).join('<br>');
+  const att = (d.attendees||[]).map((a,i)=>`<tr><td>${i+1}</td><td>${mnEsc(a.name)}</td><td>${mnEsc(a.role)}</td></tr>`).join('');
+  const abs = (d.absent||[]).map(a=>mnEsc(a.name + (a.role ? ' - ' + a.role : ''))).join('<br>');
+  const ordered = minitOrderItems(d.items||[]);
+  const rows = ordered.map((it,i)=>`<tr><td style="width:44px">${i+1}.0</td><td><p><strong>${mnEsc(String(it.title).toUpperCase())}</strong></p>${mnContentHtml(it.content, i+1)}
+    ${it.attach_images && (it.slides||[]).length ? `<div class="pv-cap">[${it.slides.length} gambar slaid akan dimasukkan]</div>` : ''}
     ${(it.figures||[]).map(f=>`${f.thumb ? `<img src="${f.thumb}" alt="">` : ''}<div class="pv-cap">${mnEsc(f.caption)}</div>`).join('')}
-    ${(it.tindakan||'').trim() ? `<div class="pv-tindakan">Tindakan : ${mnEsc(it.tindakan)}</div>` : ''}</td></tr>`).join('');
+    ${(it.tindakan||'').trim() ? `<div class="pv-tindakan">Tindakan: ${mnEsc(it.tindakan)}</div>` : ''}</td></tr>`).join('');
+  const dl = minitDateUpper(d.meeting_date, mnDateLabel(d.meeting_date));
   openModal(`<h3>Pratonton minit</h3><div class="mn-preview">
     <div class="pv-title">${title}</div><br>
-    <div><strong>Tarikh</strong>: ${mnEsc(mnDateLabel(d.meeting_date))}<br><strong>Masa</strong>: ${mnEsc(d.meeting_time)}<br><strong>Tempat</strong>: ${mnEsc(d.venue)}</div>
-    ${att ? `<p><strong>Kehadiran:</strong></p><table><tr><th style="text-align:center">NAMA</th><th style="text-align:center">JAWATAN</th></tr>${att}</table>` : ''}
-    <table><tr><th>BIL</th><th></th></tr>${rows}</table>
-    <table style="border:none"><tr><td style="border:none">Disediakan oleh:<br><br><strong>${mnEsc(d.prepared_by)}</strong><br>${mnEsc(d.prepared_role)}<br>Tarikh:</td>
-      <td style="border:none">Disahkan oleh:<br><br><strong>${mnEsc(d.verified_by)}</strong><br>${mnEsc(d.verified_role)}<br>Tarikh:</td></tr></table>
-  </div><div class="modal-actions"><button class="btn" onclick="closeModal()">Tutup</button></div>`);
+    <table class="pv-meta"><tr><td>TARIKH</td><td>: ${mnEsc(dl)}</td></tr><tr><td>MASA</td><td>: ${mnEsc(String(d.meeting_time||'').toUpperCase())}</td></tr><tr><td>TEMPAT</td><td>: ${mnEsc(String(d.venue||'').toUpperCase())}</td></tr></table>
+    ${att ? `<p><strong>Senarai Kehadiran:</strong></p><table><tr><th>BIL</th><th style="text-align:center">NAMA</th><th style="text-align:center">JAWATAN</th></tr>${att}</table>` : '<p class="pv-warn">⚠ Senarai kehadiran belum dimasukkan.</p>'}
+    ${abs ? `<p><strong>Tidak hadir dengan maaf:</strong><br>${abs}</p>` : ''}
+    <table><tr><th>BIL</th><th style="text-align:center">PERKARA</th></tr>${rows}</table>
+    <table class="pv-sign"><tr><td>Disediakan oleh:<br><br><br>..............................<br>Nama: ${mnEsc(d.prepared_by)}<br>Jawatan: ${mnEsc(d.prepared_role)}</td>
+      <td>Di Semak &amp; Disahkan oleh:<br><br><br>..............................<br>Nama: ${mnEsc(d.verified_by)}<br>Jawatan: ${mnEsc(d.verified_role)}</td></tr></table>
+  </div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Tutup</button><button class="btn secondary" onclick="mnReviewNote()">Prompt semakan</button><button class="btn" onclick="closeModal();mnFinalize()">Jana minit (Word)</button></div>`);
+}
+// After the Word file is made: reminder to check it, with a ready prompt for Claude.ai
+function mnReviewPrompt(){
+  const title = String(MN.data.title||'Minit Mesyuarat').split('\n').join(' ');
+  return [
+    'Saya lampirkan draf minit mesyuarat "' + title + '" (fail Word). Sila semak dan kemaskan minit ini:',
+    '',
+    '1. Betulkan tatabahasa, ejaan dan tanda baca mengikut Bahasa Melayu rasmi (gaya minit mesyuarat KKM).',
+    '2. Gunakan ayat laporan yang konsisten, cth. "Mesyuarat dimaklumkan bahawa…", "Mesyuarat bersetuju…", "Pengerusi mencadangkan…".',
+    '3. Jadikan ayat lebih ringkas, jelas dan tidak berulang. Tukar poin yang terlalu pendek menjadi ayat penuh.',
+    '4. Kekalkan istilah teknikal Inggeris (cth. hand hygiene, contact tracing, terminal cleaning) dalam bentuk italik.',
+    '5. JANGAN ubah fakta, angka, peratus, tarikh, nama, jawatan atau pihak yang bertanggungjawab dalam "Tindakan".',
+    '6. Kekalkan format: tajuk, TARIKH/MASA/TEMPAT, Senarai Kehadiran, Tidak hadir dengan maaf, jadual BIL | PERKARA bernombor (1.0, 1.1, 2.0…), baris "Tindakan:" dan ruang tandatangan.',
+    '7. Di akhir jawapan, senaraikan perubahan utama yang dibuat dan tandakan bahagian yang kurang jelas atau maklumat yang tertinggal (cth. masa mesyuarat ditangguhkan, nama yang tidak lengkap).',
+    '',
+    'Pulangkan minit yang telah dikemas sebagai fail Word (.docx) dengan format yang sama.'
+  ].join('\n');
+}
+function mnReviewNote(fname){
+  openModal(`<h3>✓ Minit telah dijana</h3>
+    <div class="mn-note">
+      <strong>Nota: sila semak minit dahulu sebelum diedarkan.</strong>
+      Ayat dijana secara automatik dari slaid — mungkin ada kesilapan tatabahasa, ejaan atau ayat yang kurang lengkap.
+    </div>
+    <div class="mn-help" style="margin:12px 0 6px;"><strong>Untuk kemas lebih baik:</strong> buka <a href="https://claude.ai/new" target="_blank" rel="noopener">claude.ai</a>, upload fail <em style="word-break:break-all;">${mnEsc(fname||'minit .docx')}</em> dan tampal prompt di bawah.</div>
+    <textarea id="mnRevPrompt" class="mn-review" style="min-height:220px;font-family:inherit;font-size:13px;" readonly>${mnEsc(mnReviewPrompt())}</textarea>
+    <div class="mn-help" style="margin:8px 0 0;">⚠ Pastikan minit tiada nama, IC atau no. pendaftaran pesakit sebelum upload.</div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Tutup</button>
+      <button class="btn" id="mnRevCopy" onclick="mnCopyReviewPrompt()">Salin prompt</button>
+    </div>`);
+}
+function mnCopyReviewPrompt(){
+  const txt = mnReviewPrompt(), btn = document.getElementById('mnRevCopy');
+  const done = ()=>{ if(btn) btn.textContent = 'Disalin ✓'; showToast('✓ Prompt disalin — tampal di claude.ai'); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(()=>{ const ta = document.getElementById('mnRevPrompt'); ta.select(); document.execCommand('copy'); done(); });
+  else { const ta = document.getElementById('mnRevPrompt'); ta.removeAttribute('readonly'); ta.select(); document.execCommand('copy'); ta.setAttribute('readonly',''); done(); }
 }
 async function mnFinalize(){
   const d = MN.data;
   if(!d.items.length){ alert('Belum ada sesi dalam minit ini.'); return; }
   const empty = d.items.filter(it=>!(it.content||'').trim()).map(it=>it.title);
   if(empty.length && !confirm('Sesi berikut masih kosong:\n• ' + empty.join('\n• ') + '\n\nJana minit juga?')) return;
+  if(!(d.attendees||[]).length && !confirm('Senarai kehadiran belum dimasukkan. Jana minit juga?')) return;
   const prog = t=>mnSetSaveState(t);
   try{
     prog('Memuatkan penjana dokumen…');
     const D = await mnEnsureDocx();
     const figs = {};
-    let k = 0;
+    let k = 0, missing = 0;
     for(let i=0;i<d.items.length;i++){
-      for(const f of (d.items[i].figures||[])){
+      const it = d.items[i];
+      for(const f of (it.figures||[])){
         k++; prog('Mengambil rajah ' + k + '…');
         let b64 = MN_FIG_CACHE[f.id];
         if(!b64){ const r = await apiGet('getMinitFigure', { id: f.id }); if(!r.success) throw new Error('rajah "' + f.caption + '" tidak dapat diambil dari Drive'); b64 = MN_FIG_CACHE[f.id] = r.data.base64; }
         (figs[i] = figs[i] || []).push({ data: mnB64ToBytes(b64), width: f.width, height: f.height, caption: f.caption });
       }
+      if(it.attach_images && mnDeck()){
+        for(const num of (it.slides||[])){
+          k++; prog('Menyediakan gambar slaid ' + num + '…');
+          const img = await mnSlideImage(num, 1400);
+          if(!img){ missing++; continue; }
+          (figs[i] = figs[i] || []).push({ data: mnB64ToBytes(img.dataUrl.split(',')[1]), width: img.width, height: img.height, caption: 'Slaid ' + num });
+        }
+      }
     }
+    if(missing && !confirm(missing + ' gambar slaid tidak dapat dimasukkan kerana fail slaid asal tiada dalam peranti ini (upload semula di bahagian Slaid pembentangan).\n\nTeruskan tanpa gambar itu?')){ prog('Belum disimpan'); return; }
     d.status = 'Final'; mnRenderStatus();
     if(!(await mnSave())){ d.status = 'Draf'; mnRenderStatus(); return; }
     prog('Menjana dokumen…');
@@ -3174,11 +3765,13 @@ async function mnFinalize(){
     a.href = URL.createObjectURL(blob); a.download = fname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    showToast('✓ Fail Word dimuat turun');
+    mnReviewNote(fname);
     if(blob.size < 25*1024*1024){
       prog('Menyimpan salinan ke Google Drive…');
       const up = await apiPost('uploadMinitDocx', { minit_id: MN.id, filename: fname, base64: await mnBlobToBase64(blob) });
-      prog(up.success ? 'Final — fail Word dimuat turun & disimpan di Drive' : 'Final — fail Word dimuat turun (gagal simpan ke Drive)');
-    } else prog('Final — fail Word dimuat turun');
+      prog(up.success ? '✓ Final — Word dimuat turun & disimpan di Drive' : 'Final — Word dimuat turun (gagal simpan ke Drive)');
+    } else prog('✓ Final — fail Word dimuat turun');
   }catch(err){ console.error(err); prog('Gagal jana minit'); alert('Gagal jana minit: ' + err.message); }
 }
 
