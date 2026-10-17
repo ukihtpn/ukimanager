@@ -551,6 +551,9 @@
   .navbtn{font-size:14px;padding:11px 12px;border-radius:10px;font-weight:500;}
   .navbtn.active .nav-ico{color:var(--maroon);}
   .navbtn.active{box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  .mn-oldfig{margin-top:12px;background:#fff7e6;border:1px solid #f2c46b;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#4a3500;}
+  .mn-oldfig em{font-style:normal;font-weight:700;color:#7a0019;}
+  .mn-bulk-list{max-height:40vh;overflow:auto;}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -2646,8 +2649,8 @@ function minitSentencesFromSlides(item, pages, opts){
     out.push(ref);
     return out.join('\n');
   }
-  out.push('Mesyuarat dimaklumkan mengenai ' + lowTitle.replace(/^pembentangan\s+/,'') + ' seperti slaid yang dibentangkan.');
   const many = slides.length > 1;
+  if(many) out.push('Mesyuarat dimaklumkan mengenai ' + lowTitle.replace(/^pembentangan\s+/,'') + ' seperti slaid yang dibentangkan.');
   const seenTitle = new Set(), seenLine = new Set();
   slides.forEach(s=>{
     const body = s.lines.filter(l=>l !== s.title);
@@ -3233,7 +3236,7 @@ function mnRenderSessions(){
     const slides = (it.slides||[]).length;
     const bits = [];
     if(slides) bits.push(slides + ' slaid ditanda');
-    if((it.figures||[]).length) bits.push(it.figures.length + ' rajah');
+    if((it.figures||[]).length && it.attach_images) bits.push(it.figures.length + ' gambar');
     if((it.tindakan||'').trim()) bits.push('Tindakan: ' + it.tindakan.trim());
     return `<button class="mn-sess" onclick="mnOpenSess(${i})">
       <span class="mn-sess-no">${i+1}</span>
@@ -3316,6 +3319,7 @@ function mnRenderDeck(){
     <div class="mn-thumbs">${deck.pages.map(p=>`<div class="mn-thumb ${used[p.num] ? 'picked' : ''}">
         ${p.thumb ? `<img src="${p.thumb}" alt="Slaid ${p.num}" onclick="mnZoomDeck(${p.num})">` : `<div class="mn-thumb-ph" onclick="mnZoomDeck(${p.num})">${p.num}</div>`}
         <label>Slaid ${p.num}${used[p.num] ? ' · sesi ' + used[p.num].join(',') : ''}</label></div>`).join('')}</div>
+    ${nUsed ? `<button class="btn small" style="margin-top:6px;" onclick="mnBulkGen()">✍️ Jana ayat untuk semua sesi</button>` : ''}
     <div class="mn-row" style="margin-top:8px;">
       <label class="btn secondary small mn-filebtn">+ Tambah fail slaid<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="mnDeckUpload(this)"></label>
       <button class="btn secondary small" onclick="mnDeckRemove()">Buang semua slaid</button>
@@ -3356,10 +3360,61 @@ async function mnDeckUpload(input){
       }
     }
     say('');
+    const auto = mnTickFromOldFigures();
     mnDirty(); mnRenderDeck();
     if(MN_SESS >= 0) mnRenderSess(); else mnRenderSessions();
-    showToast('✓ ' + deck.pages.length + ' slaid sedia — buka setiap sesi dan tick slaid yang berkaitan');
+    showToast(auto ? '✓ ' + deck.pages.length + ' slaid sedia — ' + auto + ' slaid ditanda ikut gambar lama. Tekan "Jana ayat untuk semua sesi".'
+                   : '✓ ' + deck.pages.length + ' slaid sedia — buka setiap sesi dan tick slaid yang berkaitan');
   }catch(err){ say(''); alert('Gagal membaca slaid: ' + err.message); }
+}
+// minutes made with the old version kept slide pictures ("Rajah: Slaid 7");
+// tick the same slides so their text can be turned into sentences
+function mnTickFromOldFigures(){
+  const deck = mnDeck(); if(!deck) return 0;
+  let n = 0;
+  MN.data.items.forEach(it=>{
+    (it.figures||[]).forEach(f=>{
+      const m = String(f.key||'').match(/^(.*)#(\d+)$/) || [null, '', (String(f.caption||'').match(/Slaid\s+(\d+)/i)||[])[1]];
+      const page = parseInt(m[2], 10); if(!page) return;
+      let fi = deck.files.indexOf(m[1]);
+      if(fi < 0) fi = deck.files.findIndex(x=>/\.pdf$/i.test(x));   // same deck under another file name
+      const p = deck.pages.find(x=>x.file === fi && x.page === page);
+      if(p && it.slides.indexOf(p.num) < 0){ it.slides.push(p.num); n++; }
+    });
+    it.slides.sort((a,b)=>a-b);
+  });
+  return n;
+}
+// one tap: sentences for every session that has ticked slides
+function mnBulkGen(){
+  const rows = MN.data.items.map((it, i)=>({ it, i, pages: mnTickedPages(it).filter(p=>p.text && p.text.trim()) })).filter(r=>r.pages.length);
+  if(!rows.length){ alert('Belum ada slaid ditanda dalam mana-mana sesi. Buka sesi dan tick slaid yang berkaitan dahulu.'); return; }
+  openModal(`<h3>Jana ayat untuk semua sesi</h3>
+    <div class="mn-help" style="margin:0 0 10px;">Isi slaid yang ditanda akan dijadikan ayat dan <strong>ditambah di bawah nota</strong> setiap sesi. Nota yang anda tulis tidak dipadam. Gambar slaid tidak dimasukkan.</div>
+    <div class="mn-bulk-list">${rows.map(r=>`<label class="mn-check" style="color:var(--ink);margin:0 0 6px;"><input type="checkbox" class="bg_cb" value="${r.i}" checked><span><strong>${r.i+1}. ${mnEsc(r.it.title)}</strong> — ${r.pages.length} slaid</span></label>`).join('')}</div>
+    <div class="seg" style="margin:12px 0 0;"><button class="active" id="bg_d" onclick="this.classList.add('active');document.getElementById('bg_r').classList.remove('active')">Dapatan terperinci</button><button id="bg_r" onclick="this.classList.add('active');document.getElementById('bg_d').classList.remove('active')">Ringkasan pembentangan</button></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" onclick="mnDoBulkGen()">Jana ayat</button></div>`);
+}
+function mnDoBulkGen(){
+  const style = document.getElementById('bg_r').classList.contains('active') ? 'ringkas' : 'dapatan';
+  const pick = Array.from(document.querySelectorAll('.bg_cb')).filter(c=>c.checked).map(c=>+c.value);
+  closeModal();
+  let done = 0;
+  pick.forEach(i=>{
+    const it = MN.data.items[i];
+    const pages = mnTickedPages(it).filter(p=>p.text && p.text.trim());
+    let text = minitSentencesFromSlides(it, pages, { style });
+    if(!text) return;
+    const cur = String(it.content||'').trim();
+    const blank = !cur || /______/.test(cur) || /^Mesyuarat dimaklumkan berkenaan\s*\(?seperti slide yang dilampirkan\)?\.?$/i.test(cur);
+    // the session already has its own opening line → keep it, add only the content
+    if(!blank && style === 'dapatan') text = text.replace(/^Mesyuarat dimaklumkan mengenai .*?\.\n*/,'');
+    if(!blank && /dilampirkan/i.test(cur)) text = text.replace(/\n*\*\(rujuk slaid pembentangan yang dilampirkan\)\*\s*$/,'');
+    it.content = blank ? text : cur + '\n\n' + text;
+    done++;
+  });
+  mnDirty(); mnRenderSessions(); mnRenderDeck();
+  showToast('✓ Ayat dijana untuk ' + done + ' sesi — semak setiap sesi sebelum jana minit');
 }
 function mnDeckRemove(){
   if(!confirm('Buang semua slaid? Tanda slaid dalam setiap sesi juga akan dibuang (nota yang sudah dijana kekal).')) return;
@@ -3478,10 +3533,10 @@ function mnRenderSess(){
       <div class="mn-block-head"><h2>Slaid untuk perkara ini ${ticked.size ? `<span class="mn-count">${ticked.size} ditanda</span>` : ''}</h2></div>
       <div id="msProg" class="mn-progress"></div>
       ${slideHtml}
-      ${figs.length ? `<div class="mn-src-name" style="margin-top:12px;">Rajah lama dalam minit (${figs.length})</div>
-        <div class="mn-figs">${figs.map((f, fi)=>`<div class="mn-fig">${f.thumb ? `<img src="${f.thumb}" alt="${mnEsc(f.caption)}">` : ''}
-          <input value="${mnEsc(f.caption)}" oninput="mnSetFigCaption(${fi}, this.value)" aria-label="Kapsyen rajah ${fi+1}">
-          <button class="at-link memo-del" style="font-size:12px;padding:0;" onclick="mnRemoveFig(${fi})">Buang dari minit</button></div>`).join('')}</div>` : ''}
+      ${figs.length ? `<div class="mn-oldfig">
+        <div><strong>${figs.length} gambar slaid dari versi lama</strong> — <em>${it.attach_images ? 'akan dimasukkan dalam minit (tanda "Masukkan gambar" aktif)' : 'TIDAK dimasukkan dalam minit'}</em>. Hanya isi (ayat) yang masuk. ${deck ? 'Slaid berkaitan sudah ditanda di atas — tekan <strong>Jana ayat</strong>.' : 'Upload fail slaid di langkah 3 untuk ambil isinya.'}</div>
+        <button class="at-link memo-del" style="font-size:12.5px;padding:4px 0 0;" onclick="mnClearOldFigs()">Buang gambar lama</button>
+      </div>` : ''}
     </section>
 
     <section class="mn-block">
@@ -3570,6 +3625,7 @@ function mnRemoveSess(){
   if(!confirm('Padam sesi "' + MN.data.items[MN_SESS].title + '"?')) return;
   MN.data.items.splice(MN_SESS, 1); mnDirty(); mnCloseSess();
 }
+function mnClearOldFigs(){ MN.data.items[MN_SESS].figures = []; mnDirty(); mnRenderSess(); }
 function mnSetFigCaption(fi, v){ MN.data.items[MN_SESS].figures[fi].caption = v; mnDirty(); }
 function mnRemoveFig(fi){ MN.data.items[MN_SESS].figures.splice(fi, 1); mnDirty(); mnRenderSess(); }
 function mnTickedPages(it){ const deck = mnDeck(); return deck ? (it.slides||[]).map(n=>deck.pages.find(p=>p.num === n)).filter(Boolean) : []; }
@@ -3675,7 +3731,7 @@ function mnPreview(){
   const ordered = minitOrderItems(d.items||[]);
   const rows = ordered.map((it,i)=>`<tr><td style="width:44px">${i+1}.0</td><td><p><strong>${mnEsc(String(it.title).toUpperCase())}</strong></p>${mnContentHtml(it.content, i+1)}
     ${it.attach_images && (it.slides||[]).length ? `<div class="pv-cap">[${it.slides.length} gambar slaid akan dimasukkan]</div>` : ''}
-    ${(it.figures||[]).map(f=>`${f.thumb ? `<img src="${f.thumb}" alt="">` : ''}<div class="pv-cap">${mnEsc(f.caption)}</div>`).join('')}
+    ${it.attach_images ? (it.figures||[]).map(f=>`${f.thumb ? `<img src="${f.thumb}" alt="">` : ''}<div class="pv-cap">${mnEsc(f.caption)}</div>`).join('') : ''}
     ${(it.tindakan||'').trim() ? `<div class="pv-tindakan">Tindakan: ${mnEsc(it.tindakan)}</div>` : ''}</td></tr>`).join('');
   const dl = minitDateUpper(d.meeting_date, mnDateLabel(d.meeting_date));
   openModal(`<h3>Pratonton minit</h3><div class="mn-preview">
@@ -3739,7 +3795,7 @@ async function mnFinalize(){
     let k = 0, missing = 0;
     for(let i=0;i<d.items.length;i++){
       const it = d.items[i];
-      for(const f of (it.figures||[])){
+      for(const f of (it.attach_images ? (it.figures||[]) : [])){
         k++; prog('Mengambil rajah ' + k + '…');
         let b64 = MN_FIG_CACHE[f.id];
         if(!b64){ const r = await apiGet('getMinitFigure', { id: f.id }); if(!r.success) throw new Error('rajah "' + f.caption + '" tidak dapat diambil dari Drive'); b64 = MN_FIG_CACHE[f.id] = r.data.base64; }
