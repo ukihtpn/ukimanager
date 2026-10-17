@@ -554,6 +554,21 @@
   .mn-oldfig{margin-top:12px;background:#fff7e6;border:1px solid #f2c46b;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#4a3500;}
   .mn-oldfig em{font-style:normal;font-weight:700;color:#7a0019;}
   .mn-bulk-list{max-height:40vh;overflow:auto;}
+
+  /* crop a graph out of a slide */
+  .modal.wide{width:900px;}
+  .mn-crop-wrap{position:relative;user-select:none;touch-action:none;cursor:crosshair;border:1px solid var(--line);border-radius:8px;overflow:hidden;line-height:0;}
+  .mn-crop-wrap img{width:100%;display:block;pointer-events:none;}
+  .mn-crop-sel{position:absolute;border:2.5px solid var(--maroon);background:rgba(122,0,25,.12);box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none;}
+  .mn-crop-sug{position:absolute;border:2px dashed #e0a100;background:rgba(242,183,5,.12);cursor:pointer;padding:0;}
+  .mn-crop-sug:hover{background:rgba(242,183,5,.25);}
+  .mn-pick-crop{display:block;width:100%;border:none;border-top:1px solid var(--line);background:#fdf3f5;color:var(--maroon);font-weight:700;font-size:12px;padding:7px 6px;cursor:pointer;font-family:inherit;}
+  .mn-pick-crop:hover{background:var(--maroon);color:#fff;}
+  .mn-crops{margin-top:12px;}
+  .mn-crop-item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:8px;background:#fbf9f7;}
+  .mn-crop-item img{width:120px;border-radius:6px;border:1px solid var(--line);flex-shrink:0;}
+  .mn-crop-item input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;}
+  .mn-crops code{background:#f1ece6;border-radius:4px;padding:0 4px;font-size:11.5px;}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -1142,7 +1157,7 @@ function refreshCurrentView(view){
    MODAL HELPERS
    ============================================================ */
 function openModal(html){ document.getElementById('modalBody').innerHTML = html; document.getElementById('modalBg').classList.add('active'); }
-function closeModal(){ document.getElementById('modalBg').classList.remove('active'); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('active'); document.getElementById('modalBody').classList.remove('wide'); }
 // short confirmation that appears at the bottom of the screen
 function showToast(msg, kind){
   let t = document.getElementById('appToast');
@@ -2543,7 +2558,7 @@ function minitMapSlides(items, pages, minScore){
 
 /* ---------- 4. Slide text → minute sentences (no AI) ---------- */
 // Lines that look like patient identifiers are never copied into a draft.
-const MINIT_NAME_RE = /\b(bin|binti|bt|bte|a\/l|a\/p|mrn|ic no|no\.? ?kp)\b/i;
+const MINIT_NAME_RE = /\b(bin|binti|bt|bte|a\/l|a\/p|b\/o|baby of|bayi kepada|mrn|ic no|no\.? ?kp)\b/i;
 function minitLooksLikePatientRow(l){
   if(MINIT_NAME_RE.test(l)) return true;
   // "14/12/2025 INDEX NAME NAME 44 ORTHO" style rows from line lists
@@ -2701,8 +2716,20 @@ function minitSentencesFromSlides(item, pages, opts){
   const seenTitle = new Set(), seenLine = new Set();
   let first = !many;
   const fresh = l=>{ const k = l.toLowerCase(); if(seenLine.has(k)) return false; seenLine.add(k); return true; };
+  const crops = opts.crops || {};
   slides.forEach(s=>{
     const titleIsLabel = s.title && minitIsLabel(s.title);
+    if((crops[s.num]||[]).length){
+      // a graph/picture was cut from this slide: explain the picture, keep only key figures
+      const what = minitLcFirst(minitLabelText(T(s.title || ''))) || 'data yang dibentangkan';
+      let sen = 'Rajah di bawah menunjukkan ' + what + '.';
+      if(first){ sen = 'Mesyuarat dimaklumkan mengenai ' + what + ' seperti rajah di bawah.'; first = false; }
+      out.push(''); out.push(sen);
+      crops[s.num].forEach(c=>out.push('[[rajah:' + c.id + ']]'));
+      const nums = minitKeyLines(s.lines.filter(l=>l !== s.title && /\d/.test(l)), 3).filter(fresh);
+      if(nums.length){ out.push('Antara dapatan utama:'); nums.forEach(l=>out.push('- ' + minitSentence(T(l)))); }
+      return;
+    }
     const body = s.lines.filter(l=>l !== s.title || titleIsLabel);
     const blocks = minitBlocks(body);
     const labelled = blocks.filter(b=>b.label && b.lines.length);
@@ -2757,8 +2784,22 @@ function minitOrderItems(items){
   return list.filter(it=>!isClose(it)).concat(list.filter(isClose));
 }
 // figuresByItem: { [itemIndex]: [{ data: Uint8Array, width, height, caption }] } (index in m.items)
-function minitBuildDocx(D, m, figuresByItem){
+function minitBuildDocx(D, m, figuresByItem, cropsById){
   figuresByItem = figuresByItem || {};
+  cropsById = cropsById || {};
+  let figNo = 0;
+  const placed = new Set();
+  function figParas(fig){
+    figNo++;
+    const maxW = 460;
+    const w = Math.min(maxW, fig.width || maxW);
+    const h = Math.round((fig.height || w*0.5625) * (w / (fig.width || maxW)));
+    const out = [ new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 40 }, keepNext: true,
+      children: [ new D.ImageRun({ type: 'jpg', data: fig.data, transformation: { width: w, height: h } }) ] }) ];
+    out.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 140 },
+      children: [ new D.TextRun({ text: 'Rajah ' + figNo + (fig.caption ? ': ' + String(fig.caption).replace(/^rajah\s*\d*\s*:\s*/i,'') : ''), italics: true, size: 18 }) ] }));
+    return out;
+  }
   const FONT = 'Arial';
   const PAGE_W = 11906, MARGIN = 1134, CONTENT_W = PAGE_W - MARGIN*2;
   const BIL_W = 900, BODY_W = CONTENT_W - BIL_W;
@@ -2814,6 +2855,7 @@ function minitBuildDocx(D, m, figuresByItem){
         ps.push(new D.Paragraph({ alignment: J, numbering: { reference: 'minit-bullets', level: 0 }, spacing: { after: 60 }, children: runs(mm[1]) })); return;
       }
       if((mm = line.match(/^tindakan\s*:\s*(.*)$/i))) { ps.push(tindakan(mm[1])); return; }
+      if((mm = line.match(/^\[\[rajah:([^\]]+)\]\]$/i))) { const f = cropsById[mm[1]]; if(f){ placed.add(mm[1]); figParas(f).forEach(p=>ps.push(p)); } return; }
       ps.push(para(line));
     });
     return ps;
@@ -2867,15 +2909,9 @@ function minitBuildDocx(D, m, figuresByItem){
     const no = k + 1;
     const body = [ new D.Paragraph({ spacing: { after: 100 }, keepNext: true, children: [ new D.TextRun({ text: String(it.title || '').toUpperCase(), bold: true, size: SZ }) ] }) ];
     contentToParagraphs(it.content, no).forEach(p=>body.push(p));
-    (figuresByItem[it._idx]||[]).forEach(fig=>{
-      const maxW = 470;
-      const w = Math.min(maxW, fig.width || maxW);
-      const h = Math.round((fig.height || w*0.5625) * (w / (fig.width || maxW)));
-      body.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 40 },
-        children: [ new D.ImageRun({ type: 'jpg', data: fig.data, transformation: { width: w, height: h } }) ] }));
-      if(fig.caption) body.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 120 },
-        children: [ new D.TextRun({ text: fig.caption, italics: true, size: 18 }) ] }));
-    });
+    // pictures cut from slides whose marker was removed from the notes go at the end
+    (it.crops||[]).forEach(c=>{ if(!placed.has(c.id) && cropsById[c.id]){ placed.add(c.id); figParas(cropsById[c.id]).forEach(p=>body.push(p)); } });
+    (figuresByItem[it._idx]||[]).forEach(fig=>figParas(fig).forEach(p=>body.push(p)));
     if((it.tindakan||'').trim()) body.push(tindakan(it.tindakan.trim()));
     itemRows.push(new D.TableRow({ cantSplit: false, children: [
       new D.TableCell({ borders, width: { size: BIL_W, type: D.WidthType.DXA }, margins: cellMargins, children: [ cellP(no + '.0') ] }),
@@ -3114,7 +3150,7 @@ async function mnDelete(id){
 function mnNormalize(){
   Object.keys(MN_DECK_DOCS).forEach(k=>delete MN_DECK_DOCS[k]);
   MN.data.absent = MN.data.absent || [];
-  MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; });
+  MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; it.crops = it.crops || []; });
 }
 function mnBackToList(){
   const st = document.getElementById('mnSaveState').textContent;
@@ -3481,7 +3517,7 @@ async function mnDoBulkGen(){
   pick.forEach(i=>{
     const it = MN.data.items[i];
     const pages = mnTickedPages(it).filter(p=>p.text && p.text.trim());
-    let text = minitSentencesFromSlides(it, pages, { style, tr: MN_TR });
+    let text = minitSentencesFromSlides(it, pages, { style, tr: MN_TR, crops: mnCropsBySlide(it) });
     if(!text) return;
     const cur = String(it.content||'').trim();
     const blank = !cur || /______/.test(cur) || /^Mesyuarat dimaklumkan berkenaan\s*\(?seperti slide yang dilampirkan\)?\.?$/i.test(cur);
@@ -3591,12 +3627,19 @@ function mnRenderSess(){
           <span class="mn-pick-box" aria-hidden="true">${ticked.has(p.num) ? '✓' : ''}</span>
           <span class="mn-pick-cap">Slaid ${p.num}${suggest.has(p.num) ? ' <b class="mn-sug">cadangan</b>' : ''}${otherUse[p.num] ? ` <i>sesi ${otherUse[p.num].join(',')}</i>` : ''}</span>
           <button class="mn-pick-zoom" onclick="event.stopPropagation();mnZoomDeck(${p.num})" aria-label="Besarkan slaid ${p.num}">⤢</button>
+          ${ticked.has(p.num) ? `<button class="mn-pick-crop" onclick="event.stopPropagation();mnCropSlide(${p.num})">✂️ Pilih graf/gambar${(it.crops||[]).filter(c=>c.slide===p.num).length ? ' (' + it.crops.filter(c=>c.slide===p.num).length + ')' : ''}</button>` : ''}
         </div>`).join('') || '<div class="mn-help">Tiada slaid dalam paparan ini.</div>'}</div>
       <div class="mn-row" style="margin-top:12px;">
         <button class="btn small" onclick="mnGenSentences()" ${ticked.size ? '' : 'disabled'}>✍️ Jana ayat dari ${ticked.size || ''} slaid ditanda</button>
         ${MN_AI ? `<button class="btn secondary small" onclick="mnDraftAi()" ${ticked.size ? '' : 'disabled'}>✨ Draf AI</button>` : ''}
       </div>
-      <label class="mn-check"><input type="checkbox" ${it.attach_images ? 'checked' : ''} onchange="mnSetItem('attach_images', this.checked)"><span>Masukkan juga <strong>gambar</strong> slaid ditanda dalam minit (biasanya tidak perlu — cukup ayat + "rujuk slaid")</span></label>`;
+      ${(it.crops||[]).length ? `<div class="mn-crops"><div class="mn-src-name">Graf / gambar dalam minit (${it.crops.length})</div>
+        ${it.crops.map((c, ci)=>`<div class="mn-crop-item"><img src="${c.thumb}" alt="">
+          <div style="flex:1;min-width:0;"><label class="mn-help" style="margin:0 0 4px;display:block;">Kapsyen (Rajah ${ci+1} · slaid ${c.slide})</label>
+          <input value="${mnEsc(c.caption||'')}" oninput="mnSetCropCaption(${ci}, this.value)" aria-label="Kapsyen gambar ${ci+1}">
+          <div style="display:flex;gap:12px;margin-top:4px;"><button class="at-link" style="font-size:12px;padding:0;" onclick="mnInsertCropMarker(${ci})">Letak di kursor nota</button><button class="at-link memo-del" style="font-size:12px;padding:0;" onclick="mnRemoveCrop(${ci})">Buang</button></div></div></div>`).join('')}
+        <div class="mn-help" style="margin:6px 0 0;">Dalam nota, baris <code>[[rajah:…]]</code> menandakan tempat gambar dalam minit — boleh dialih ke atas/bawah.</div></div>` : ''}
+      <label class="mn-check"><input type="checkbox" ${it.attach_images ? 'checked' : ''} onchange="mnSetItem('attach_images', this.checked)"><span>Masukkan <strong>keseluruhan</strong> slaid ditanda sebagai gambar (biasanya tidak perlu — guna "✂️ Pilih graf/gambar" untuk ambil bahagian graf sahaja)</span></label>`;
   const figs = it.figures || [];
   const people = (MN.data.attendees||[]).map(a=>a.name).filter(Boolean);
   document.getElementById('mnSessBody').innerHTML = `
@@ -3703,6 +3746,105 @@ function mnRemoveSess(){
   if(!confirm('Padam sesi "' + MN.data.items[MN_SESS].title + '"?')) return;
   MN.data.items.splice(MN_SESS, 1); mnDirty(); mnCloseSess();
 }
+/* ---------- cut a graph / picture out of a slide ---------- */
+function mnCropsBySlide(it){ const m = {}; (it.crops||[]).forEach(c=>{ (m[c.slide] = m[c.slide] || []).push(c); }); return m; }
+function mnSetCropCaption(ci, v){ MN.data.items[MN_SESS].crops[ci].caption = v; mnDirty(); }
+function mnRemoveCrop(ci){
+  const it = MN.data.items[MN_SESS], c = it.crops[ci];
+  it.crops.splice(ci, 1);
+  it.content = String(it.content||'').split('\n').filter(l=>l.trim() !== '[[rajah:' + c.id + ']]').join('\n');
+  mnDirty(); mnRenderSessKeepScroll();
+}
+function mnInsertCropMarker(ci){
+  const c = MN.data.items[MN_SESS].crops[ci];
+  const ta = document.getElementById('ms_content'); if(!ta) return;
+  ta.value = ta.value.split('\n').filter(l=>l.trim() !== '[[rajah:' + c.id + ']]').join('\n');
+  mnInsertText('\n[[rajah:' + c.id + ']]\n');
+}
+// pictures embedded in a PDF page (photos, pasted charts) → suggested boxes in image pixels
+async function mnDetectImageBoxes(num, width){
+  try{
+    const p = mnDeck().pages.find(x=>x.num === num), src = MN_DECK_DOCS[p.file];
+    if(!src || src.kind !== 'pdf') return [];
+    const page = await src.doc.getPage(p.page);
+    const vp = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
+    const ops = await page.getOperatorList(), O = window.pdfjsLib.OPS;
+    const mul = (a, b)=>[a[0]*b[0]+a[2]*b[1], a[1]*b[0]+a[3]*b[1], a[0]*b[2]+a[2]*b[3], a[1]*b[2]+a[3]*b[3], a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5]];
+    let ctm = vp.transform.slice(); const stack = [], boxes = [];
+    const imgOps = [O.paintImageXObject, O.paintJpegXObject, O.paintInlineImageXObject, O.paintImageXObjectRepeat].filter(x=>x != null);
+    ops.fnArray.forEach((fn, i)=>{
+      if(fn === O.save) stack.push(ctm.slice());
+      else if(fn === O.restore) ctm = stack.pop() || ctm;
+      else if(fn === O.transform) ctm = mul(ctm, ops.argsArray[i]);
+      else if(imgOps.indexOf(fn) > -1){
+        const pts = [[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>[ctm[0]*x+ctm[2]*y+ctm[4], ctm[1]*x+ctm[3]*y+ctm[5]]);
+        const xs = pts.map(q=>q[0]), ys = pts.map(q=>q[1]);
+        const b = { x: Math.max(0, Math.min(...xs)), y: Math.max(0, Math.min(...ys)), x2: Math.min(vp.width, Math.max(...xs)), y2: Math.min(vp.height, Math.max(...ys)) };
+        const area = (b.x2-b.x)*(b.y2-b.y) / (vp.width*vp.height);
+        if(area > 0.03 && area < 0.92) boxes.push({ x: b.x, y: b.y, w: b.x2-b.x, h: b.y2-b.y });
+      }
+    });
+    return boxes.slice(0, 6);
+  }catch(e){ console.warn(e); return []; }
+}
+let MN_CROP = null;
+async function mnCropSlide(num){
+  const img = await mnSlideImage(num, 1600);
+  if(!img){ alert('Fail slaid asal tiada dalam peranti ini. Upload semula fail slaid di langkah 3 (Slaid pembentangan), kemudian cuba lagi.'); return; }
+  const boxes = await mnDetectImageBoxes(num, img.width);
+  MN_CROP = { num, img, boxes, sel: null };
+  openModal(`<h3>Pilih graf / gambar — slaid ${num}</h3>
+    <div class="mn-help" style="margin:0 0 8px;">Seret (drag) kotak pada bahagian graf atau gambar yang mahu dimasukkan dalam minit.${boxes.length ? ' Atau tekan kotak bergaris yang dicadangkan.' : ''}</div>
+    <div class="mn-crop-wrap" id="cropWrap"><img id="cropImg" src="${img.dataUrl}" alt="Slaid ${num}" draggable="false">
+      ${boxes.map((b, k)=>`<button class="mn-crop-sug" style="left:${b.x/img.width*100}%;top:${b.y/img.height*100}%;width:${b.w/img.width*100}%;height:${b.h/img.height*100}%;" onclick="mnCropPick(${k})" aria-label="Gambar dicadangkan ${k+1}"></button>`).join('')}
+      <div class="mn-crop-sel hidden" id="cropSel"></div></div>
+    <div class="field" style="margin-top:10px;"><label for="crop_cap">Kapsyen</label><input id="crop_cap" value="${mnEsc(minitLabelText(MN_TR[minitSlideTitle(minitCleanLines((mnDeck().pages.find(x=>x.num===num)||{}).text||''))] || minitSlideTitle(minitCleanLines((mnDeck().pages.find(x=>x.num===num)||{}).text||'')) || ('Slaid ' + num)))}"></div>
+    <div class="mn-help" style="margin:4px 0 0;">⚠ Pastikan bahagian yang dipilih tiada nama, IC atau no. katil + nama pesakit.</div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn secondary" onclick="mnCropWhole()">Seluruh slaid</button><button class="btn" id="cropSave" onclick="mnCropSave()" disabled>Simpan bahagian dipilih</button></div>`);
+  document.getElementById('modalBody').classList.add('wide');
+  const wrap = document.getElementById('cropWrap'), sel = document.getElementById('cropSel');
+  let start = null;
+  const pos = e=>{ const r = wrap.getBoundingClientRect(); return { x: Math.min(Math.max(e.clientX - r.left, 0), r.width) / r.width, y: Math.min(Math.max(e.clientY - r.top, 0), r.height) / r.height }; };
+  const draw = (a, b)=>{ const x = Math.min(a.x,b.x), y = Math.min(a.y,b.y), w = Math.abs(a.x-b.x), h = Math.abs(a.y-b.y);
+    MN_CROP.sel = { x, y, w, h }; sel.classList.remove('hidden');
+    Object.assign(sel.style, { left: x*100+'%', top: y*100+'%', width: w*100+'%', height: h*100+'%' });
+    document.getElementById('cropSave').disabled = !(w > 0.03 && h > 0.03); };
+  wrap.addEventListener('pointerdown', e=>{ if(e.target.classList.contains('mn-crop-sug')) return; start = pos(e); wrap.setPointerCapture(e.pointerId); e.preventDefault(); });
+  wrap.addEventListener('pointermove', e=>{ if(start) draw(start, pos(e)); });
+  wrap.addEventListener('pointerup', e=>{ if(start){ draw(start, pos(e)); start = null; } });
+}
+function mnCropPick(k){
+  const b = MN_CROP.boxes[k], W = MN_CROP.img.width, H = MN_CROP.img.height;
+  MN_CROP.sel = { x: b.x/W, y: b.y/H, w: b.w/W, h: b.h/H };
+  const sel = document.getElementById('cropSel'); sel.classList.remove('hidden');
+  Object.assign(sel.style, { left: MN_CROP.sel.x*100+'%', top: MN_CROP.sel.y*100+'%', width: MN_CROP.sel.w*100+'%', height: MN_CROP.sel.h*100+'%' });
+  document.getElementById('cropSave').disabled = false;
+}
+function mnCropWhole(){ MN_CROP.sel = { x: 0, y: 0, w: 1, h: 1 }; mnCropSave(); }
+async function mnCropSave(){
+  const c = MN_CROP; if(!c || !c.sel) return;
+  const btn = document.getElementById('cropSave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  try{
+    const im = new Image(); await new Promise((res, rej)=>{ im.onload = res; im.onerror = rej; im.src = c.img.dataUrl; });
+    const sx = Math.round(c.sel.x*im.width), sy = Math.round(c.sel.y*im.height), sw = Math.round(c.sel.w*im.width), sh = Math.round(c.sel.h*im.height);
+    const k = Math.min(1, 1400 / sw);
+    const cv = document.createElement('canvas'); cv.width = Math.round(sw*k); cv.height = Math.round(sh*k);
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+    const dataUrl = cv.toDataURL('image/jpeg', 0.88), b64 = dataUrl.split(',')[1];
+    const up = await apiPost('uploadMinitFigure', { base64: b64, filename: 'rajah_' + Date.now() + '.jpg' });
+    if(!up.success) throw new Error(up.message || 'gagal simpan ke Drive');
+    MN_FIG_CACHE[up.data.id] = b64;
+    const thumb = (await mnScaleImage(dataUrl, 360, 0.75)).dataUrl;
+    const it = MN.data.items[MN_SESS];
+    it.crops = it.crops || [];
+    it.crops.push({ id: up.data.id, slide: c.num, thumb, width: cv.width, height: cv.height, caption: document.getElementById('crop_cap').value.trim() });
+    // place the picture at the end of the notes; the user can move the marker line
+    it.content = String(it.content||'').replace(/\s+$/,'') + '\n[[rajah:' + up.data.id + ']]';
+    closeModal(); mnDirty(); mnRenderSessKeepScroll();
+    showToast('✓ Gambar disimpan — akan masuk dalam minit sebagai Rajah');
+  }catch(err){ btn.disabled = false; btn.textContent = 'Simpan bahagian dipilih'; alert('Gagal simpan gambar: ' + err.message); }
+}
 function mnClearOldFigs(){ MN.data.items[MN_SESS].figures = []; mnDirty(); mnRenderSess(); }
 function mnSetFigCaption(fi, v){ MN.data.items[MN_SESS].figures[fi].caption = v; mnDirty(); }
 function mnRemoveFig(fi){ MN.data.items[MN_SESS].figures.splice(fi, 1); mnDirty(); mnRenderSess(); }
@@ -3729,7 +3871,7 @@ function mnGenSentences(style){
     mnTranslate(need).then(()=>mnGenSentences(style)).catch(err=>{ closeModal(); alert('Terjemahan gagal: ' + err.message); });
     return;
   }
-  const text = minitSentencesFromSlides(it, pages, { style, presenter, tr: MN_TR });
+  const text = minitSentencesFromSlides(it, pages, { style, presenter, tr: MN_TR, crops: mnCropsBySlide(it) });
   const hasNotes = !!(it.content||'').trim() && !/______/.test(it.content);
   openModal(`<h3>Ayat dari ${pages.length} slaid</h3>
     <div class="seg" style="margin-bottom:10px;">
@@ -3799,7 +3941,8 @@ async function mnSave(silent){
   mnClearBackup();
   return true;
 }
-function mnContentHtml(content, no){
+function mnContentHtml(content, no, crops){
+  const byId = {}; (crops||[]).forEach(c=>{ byId[c.id] = c; });
   let html = '', inList = 0, sub = 0;
   const close = ()=>{ while(inList>0){ html += '</ul>'; inList--; } };
   const inline = s=>mnEsc(s).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
@@ -3810,6 +3953,7 @@ function mnContentHtml(content, no){
     if((m = line.match(/^(?:\s{2,}|\t)[-•o]\s+(.*)$/)) || (m = line.match(/^--\s+(.*)$/))){ if(inList < 2){ html += '<ul style="list-style:circle">'; inList = 2; } html += `<li>${inline(m[1])}</li>`; return; }
     if((m = line.match(/^[-•]\s+(.*)$/))){ if(inList === 2){ html += '</ul>'; inList = 1; } if(inList < 1){ html += '<ul>'; inList = 1; } html += `<li>${inline(m[1])}</li>`; return; }
     if((m = line.match(/^tindakan\s*:\s*(.*)$/i))){ close(); html += `<div class="pv-tindakan">Tindakan: ${inline(m[1])}</div>`; return; }
+    if((m = line.match(/^\[\[rajah:([^\]]+)\]\]$/i))){ close(); const c = byId[m[1]]; if(c){ c._shown = true; html += `<img src="${c.thumb}" alt=""><div class="pv-cap">Rajah: ${mnEsc(c.caption||'')}</div>`; } return; }
     close(); html += `<p>${inline(line)}</p>`;
   });
   close();
@@ -3823,7 +3967,7 @@ function mnPreview(){
   const att = (d.attendees||[]).map((a,i)=>`<tr><td>${i+1}</td><td>${mnEsc(a.name)}</td><td>${mnEsc(a.role)}</td></tr>`).join('');
   const abs = (d.absent||[]).map(a=>mnEsc(a.name + (a.role ? ' - ' + a.role : ''))).join('<br>');
   const ordered = minitOrderItems(d.items||[]);
-  const rows = ordered.map((it,i)=>`<tr><td style="width:44px">${i+1}.0</td><td><p><strong>${mnEsc(String(it.title).toUpperCase())}</strong></p>${mnContentHtml(it.content, i+1)}
+  const rows = ordered.map((it,i)=>`<tr><td style="width:44px">${i+1}.0</td><td><p><strong>${mnEsc(String(it.title).toUpperCase())}</strong></p>${mnContentHtml(it.content, i+1, it.crops)}${(it.crops||[]).filter(c=>!c._shown).map(c=>`<img src="${c.thumb}" alt=""><div class="pv-cap">Rajah: ${mnEsc(c.caption||'')}</div>`).join('')}${(it.crops||[]).forEach(c=>{ delete c._shown; }) || ''}
     ${it.attach_images && (it.slides||[]).length ? `<div class="pv-cap">[${it.slides.length} gambar slaid akan dimasukkan]</div>` : ''}
     ${it.attach_images ? (it.figures||[]).map(f=>`${f.thumb ? `<img src="${f.thumb}" alt="">` : ''}<div class="pv-cap">${mnEsc(f.caption)}</div>`).join('') : ''}
     ${(it.tindakan||'').trim() ? `<div class="pv-tindakan">Tindakan: ${mnEsc(it.tindakan)}</div>` : ''}</td></tr>`).join('');
@@ -3904,11 +4048,20 @@ async function mnFinalize(){
         }
       }
     }
+    const cropsById = {};
+    for(const it of d.items){
+      for(const c of (it.crops||[])){
+        k++; prog('Mengambil gambar ' + k + '…');
+        let b64 = MN_FIG_CACHE[c.id];
+        if(!b64){ const r = await apiGet('getMinitFigure', { id: c.id }); if(!r.success) throw new Error('gambar "' + (c.caption||'') + '" tidak dapat diambil dari Drive'); b64 = MN_FIG_CACHE[c.id] = r.data.base64; }
+        cropsById[c.id] = { data: mnB64ToBytes(b64), width: c.width, height: c.height, caption: c.caption };
+      }
+    }
     if(missing && !confirm(missing + ' gambar slaid tidak dapat dimasukkan kerana fail slaid asal tiada dalam peranti ini (upload semula di bahagian Slaid pembentangan).\n\nTeruskan tanpa gambar itu?')){ prog('Belum disimpan'); return; }
     d.status = 'Final'; mnRenderStatus();
     if(!(await mnSave())){ d.status = 'Draf'; mnRenderStatus(); return; }
     prog('Menjana dokumen…');
-    const doc = minitBuildDocx(D, Object.assign({}, mnPlain(d), { meeting_date_label: mnDateLabel(d.meeting_date) }), figs);
+    const doc = minitBuildDocx(D, Object.assign({}, mnPlain(d), { meeting_date_label: mnDateLabel(d.meeting_date) }), figs, cropsById);
     const blob = await D.Packer.toBlob(doc);
     const fname = 'Minit_' + String(d.title||'Mesyuarat').split('\n').join(' ').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,60) + '_' + (d.meeting_date||'') + '.docx';
     const a = document.createElement('a');
