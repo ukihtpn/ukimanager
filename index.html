@@ -647,6 +647,13 @@
   .mn-rec-ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
   .mn-rec-item.sel{border-color:var(--maroon);background:#fdf3f5;}
   .mn-rec-start:disabled{opacity:.45;}
+  .ob-rem-empty{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px dashed #d9c7b8;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+  .ob-rem-empty strong{display:block;color:var(--ink);}
+  .ob-list{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto;}
+  .ob-list-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbf9f7;}
+  .ob-list-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
+  .ob-st{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:#eee;color:#555;}
+  .ob-st.on{background:#fdecec;color:var(--red);}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -2294,7 +2301,11 @@ async function renderObReminders(){
   const yNow = new Date().getFullYear();
   const res = obYear === yNow ? { data: cache.outbreak } : await apiGet('getOutbreakRecords', { record_type:'Outbreak', year: yNow });
   const act = (res.data || []).filter(obIsActive);
-  if(!act.length){ box.innerHTML = ''; return; }
+  if(!act.length){
+    box.innerHTML = `<div class="ob-rem-empty">⏰ <div><strong>Tiada outbreak aktif dengan peringatan 6 minggu.</strong>
+      Untuk peringatan mesyuarat penutup, tekan rekod outbreak dalam jadual (atau <b>+ Add Outbreak Period</b>), isi <b>Tarikh kes positif terakhir</b>, biarkan <b>Tarikh tamat</b> kosong dan Status <b>Aktif</b>.</div></div>`;
+    return;
+  }
   const today = obToday();
   const cards = act.map(r=>{
     const base = obDate(r.last_positive_date || r.start_date);
@@ -2376,7 +2387,8 @@ function renderObGrid(elId, records, type){
           ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-${ed.getDate()}/${ed.getMonth()+1}/${yy(ed)}`
           : `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}`;
         const i = OB_RECS.push(rec) - 1;
-        html += `<div class="cell filled ${type}" title="${obEsc(rec.organism||'')}" onclick="openOutbreakModal('${type}', OB_RECS[${i}])">${label}${recs.length > 1 ? `<small>+${recs.length-1}</small>` : ''}</div>`;
+        const ids = recs.map(r=>OB_RECS.indexOf(r) >= 0 ? OB_RECS.indexOf(r) : OB_RECS.push(r) - 1);
+        html += `<div class="cell filled ${type}" title="${obEsc(rec.organism||'')}${recs.length > 1 ? ' — ' + recs.length + ' rekod' : ''}" onclick="${recs.length > 1 ? `obCellList('${type}', [${ids.join(',')}], '${obEsc(ward)}', ${m})` : `openOutbreakModal('${type}', OB_RECS[${i}])`}">${label}${recs.length > 1 ? `<small>+${recs.length-1} lagi</small>` : ''}</div>`;
       } else {
         html += `<div class="cell" onclick="openOutbreakModal('${type}', null, '${obEsc(ward)}', ${m})"></div>`;
       }
@@ -2432,7 +2444,8 @@ async function saveOutbreakRecord(type, id){
     data.status = document.getElementById('ob_status').value;
     if(data.status === 'Closed' && !data.end_date) data.end_date = data.last_positive_date || start;
   }
-  if(data.end_date < data.start_date){ alert('Tarikh tamat sebelum tarikh mula.'); return; }
+  if(data.end_date && data.end_date < data.start_date){ alert('Tarikh tamat sebelum tarikh mula.'); return; }
+  if(data.last_positive_date && data.last_positive_date < data.start_date){ alert('Tarikh kes positif terakhir sebelum tarikh mula outbreak.'); return; }
   const btn = document.getElementById('ob_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
   const res = id ? await apiPost('updateOutbreakRecord', Object.assign({ record_id: id }, data)) : await apiPost('createOutbreakRecord', data);
   if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message || 'cuba lagi')); return; }
@@ -2443,8 +2456,26 @@ async function saveOutbreakRecord(type, id){
   showToast('✓ Disimpan — ' + ward + ', ' + obDate(start).getDate() + ' ' + MONTHS[obDate(start).getMonth()]);
 }
 async function deleteOutbreakRecord(id){
+  if(!confirm('Padam rekod ini?')) return;
   await apiPost('deleteOutbreakRecord', { record_id:id });
-  closeModal(); loadOutbreak();
+  closeModal(); await loadOutbreak(); showToast('✓ Rekod dipadam');
+}
+// several records in one cell: list them so each can be opened, fixed or deleted
+function obCellList(type, idxs, ward, month){
+  const recs = idxs.map(k=>OB_RECS[k]);
+  const fmt = d=>{ const x = obDate(d); return x.getDate() + '/' + (x.getMonth()+1) + '/' + String(x.getFullYear()).slice(2); };
+  openModal(`<h3>${obEsc(ward)} — ${recs.length} rekod</h3>
+    <div class="mn-help" style="margin:0 0 10px;">Rekod yang bertindih dalam bulan ini. Tekan untuk ubah (cth. isi tarikh kes positif terakhir) atau padam rekod berulang.</div>
+    <div class="ob-list">${recs.map((r, j)=>{
+      const act = type === 'Outbreak' && obIsActive(r);
+      return `<div class="ob-list-row">
+        <div style="flex:1;min-width:0;"><strong>${obEsc(r.organism || '(tiada label)')}</strong>
+          <small>${fmt(r.start_date)} – ${act ? 'kini' : fmt(r.end_date || r.start_date)}${r.last_positive_date ? ' · kes terakhir ' + fmt(r.last_positive_date) : ''}</small></div>
+        ${type === 'Outbreak' ? `<span class="ob-st ${act ? 'on' : ''}">${act ? 'Aktif' : 'Ditutup'}</span>` : ''}
+        <button class="at-link" onclick="openOutbreakModal('${type}', OB_RECS[${idxs[j]}])">Ubah</button>
+        <button class="at-link memo-del" onclick="deleteOutbreakRecord('${obEsc(r.record_id)}')">Padam</button>
+      </div>`; }).join('')}</div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Tutup</button><button class="btn" onclick="openOutbreakModal('${type}', null, '${ward}', ${month})">+ Rekod baru</button></div>`);
 }
 function openLinkModal(){
   openModal(`
