@@ -654,6 +654,16 @@
   .ob-list-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
   .ob-st{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:#eee;color:#555;}
   .ob-st.on{background:#fdecec;color:var(--red);}
+
+  /* outbreak organisms */
+  .ob-grid .cell.filled.Outbreak{color:#fff;}
+  .ob-org-lbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:.02em;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .ob-legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px;color:var(--muted);margin:-8px 0 4px;}
+  .ob-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--ink);font-weight:600;}
+  .ob-legend i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .ob-orgs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .ob-org{border:1.5px solid var(--oc);color:var(--oc);background:#fff;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .ob-org.on{background:var(--oc);color:#fff;}
   /* BOTTOM NAV (mobile only) */
   .bottom-nav{display:none;}
   .topbar-switch{display:none;}
@@ -987,6 +997,7 @@
           <button class="btn small" onclick="openOutbreakModal('Outbreak')">+ Add Outbreak Period</button>
         </div>
         <div class="ob-scroll"><div class="ob-grid" id="obGridOutbreak"></div></div>
+        <div class="ob-legend" id="obLegend"></div>
       </div>
 
       <div class="panel">
@@ -2257,7 +2268,7 @@ async function memoSaveManual(){
 async function loadOutbreak(){
   if(!ensureApi()) return;
   document.getElementById('obYearLabel1').textContent = obYear;
-  document.getElementById('obTitle1').textContent = 'TIMELINE CRE OUTBREAK — HOSPITAL TENGKU PERMAISURI NORASHIKIN ' + obYear;
+  document.getElementById('obTitle1').textContent = 'TIMELINE OUTBREAK — HOSPITAL TENGKU PERMAISURI NORASHIKIN ' + obYear;
   document.getElementById('obTitle2').textContent = 'TIMELINE OUTBREAK MANAGEMENT MEETING (OMT) — HOSPITAL TENGKU PERMAISURI NORASHIKIN ' + obYear;
   const [obRes, omtRes, linkRes] = await Promise.all([
     apiGet('getOutbreakRecords', { record_type:'Outbreak', year: obYear }),
@@ -2267,6 +2278,8 @@ async function loadOutbreak(){
   cache.outbreak = obRes.data || []; cache.omt = omtRes.data || []; cache.links = linkRes.data || [];
   OB_RECS = [];
   renderObGrid('obGridOutbreak', cache.outbreak, 'Outbreak');
+  const orgs = []; (cache.outbreak||[]).forEach(r=>{ const k = String(r.organism||'').replace(/\s*\(.*?\)\s*/g,' ').trim(); if(k && orgs.indexOf(k) < 0) orgs.push(k); });
+  document.getElementById('obLegend').innerHTML = orgs.length ? 'Petunjuk: ' + orgs.map(o=>`<span><i style="background:${obOrgColor(o)}"></i>${obEsc(o)}</span>`).join('') : '';
   renderObReminders();
   renderObGrid('obGridOMT', cache.omt, 'OMT');
   document.getElementById('linksList').innerHTML = cache.links.length ? cache.links.map(l=>`
@@ -2382,19 +2395,31 @@ function renderObGrid(elId, records, type){
         const sd = obDate(rec.start_date), ed = obEnd(rec);
         const yy = d=>String(d.getFullYear()).slice(2);
         const open = type === 'Outbreak' && obIsActive(rec);
-        const label = open ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-kini`
+        const org = type === 'Outbreak' && rec.organism ? `<b class="ob-org-lbl">${obEsc(String(rec.organism).replace(/\s*\(.*?\)\s*/g,' ').trim())}</b>` : '';
+        const label = org + (open ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-kini`
           : obYmd(sd) !== obYmd(ed)
           ? `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}-${ed.getDate()}/${ed.getMonth()+1}/${yy(ed)}`
-          : `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}`;
+          : `${sd.getDate()}/${sd.getMonth()+1}/${yy(sd)}`);
         const i = OB_RECS.push(rec) - 1;
         const ids = recs.map(r=>OB_RECS.indexOf(r) >= 0 ? OB_RECS.indexOf(r) : OB_RECS.push(r) - 1);
-        html += `<div class="cell filled ${type}" title="${obEsc(rec.organism||'')}${recs.length > 1 ? ' — ' + recs.length + ' rekod' : ''}" onclick="${recs.length > 1 ? `obCellList('${type}', [${ids.join(',')}], '${obEsc(ward)}', ${m})` : `openOutbreakModal('${type}', OB_RECS[${i}])`}">${label}${recs.length > 1 ? `<small>+${recs.length-1} lagi</small>` : ''}</div>`;
+        html += `<div class="cell filled ${type}" ${type === 'Outbreak' ? `style="background:${obOrgColor(rec.organism)}"` : ''} title="${obEsc(rec.organism||'')}${recs.length > 1 ? ' — ' + recs.length + ' rekod' : ''}" onclick="${recs.length > 1 ? `obCellList('${type}', [${ids.join(',')}], '${obEsc(ward)}', ${m})` : `openOutbreakModal('${type}', OB_RECS[${i}])`}">${label}${recs.length > 1 ? `<small>+${recs.length-1} lagi</small>` : ''}</div>`;
       } else {
         html += `<div class="cell" onclick="openOutbreakModal('${type}', null, '${obEsc(ward)}', ${m})"></div>`;
       }
     }
   });
   document.getElementById(elId).innerHTML = html;
+}
+const OB_ORGS = ['CRE','MRSA','RSV','Influenza','COVID-19','MRO-ACB','VRE','ESBL','C. difficile','Norovirus','Varicella','TB','Scabies'];
+const OB_ORG_COLORS = { 'CRE':'#d32f2f', 'MRSA':'#7b1fa2', 'RSV':'#1565c0', 'INFLUENZA':'#00838f', 'COVID-19':'#5d4037', 'MRO-ACB':'#c2185b', 'VRE':'#ef6c00', 'ESBL':'#2e7d32', 'C. DIFFICILE':'#6d4c41', 'NOROVIRUS':'#455a64', 'VARICELLA':'#ad1457', 'TB':'#37474f', 'SCABIES':'#827717' };
+function obOrgKey(o){ return String(o||'').replace(/\(.*?\)/g,'').trim().toUpperCase(); }
+function obOrgColor(o){
+  const k = obOrgKey(o);
+  if(OB_ORG_COLORS[k]) return OB_ORG_COLORS[k];
+  const hit = Object.keys(OB_ORG_COLORS).find(x=>k.indexOf(x) === 0);
+  if(hit) return OB_ORG_COLORS[hit];
+  let h = 0; k.split('').forEach(c=>{ h = (h*31 + c.charCodeAt(0)) % 360; });
+  return k ? 'hsl(' + h + ',55%,38%)' : '#d32f2f';
 }
 function obEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function openOutbreakModal(type, existing, presetWard, presetMonth){
@@ -2408,7 +2433,9 @@ function openOutbreakModal(type, existing, presetWard, presetMonth){
       <option value="__other">+ Wad lain (cth. SCN, NICU)…</option>
     </select>
     <input id="ob_ward_other" class="hidden" style="margin-top:8px;" placeholder="Taip nama wad, cth. SCN"></div>
-    <div class="field"><label for="ob_organism">Organisma / label</label><input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="cth. CRE, RSV"></div>
+    <div class="field"><label for="ob_organism">Organisma</label>
+      ${type === 'Outbreak' ? `<div class="ob-orgs">${OB_ORGS.map(o=>`<button type="button" class="ob-org ${String(r.organism||'').toUpperCase() === o.toUpperCase() ? 'on' : ''}" style="--oc:${obOrgColor(o)}" onclick="document.getElementById('ob_organism').value='${o}';document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b===this))">${o}</button>`).join('')}</div>` : ''}
+      <input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="${type === 'Outbreak' ? 'Pilih di atas atau taip organisma lain' : 'cth. OMT RSV SCN'}" oninput="document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b.textContent.toUpperCase()===this.value.trim().toUpperCase()))"></div>
     <div class="formgrid">
       <div class="field"><label for="ob_start">Tarikh mula</label><input type="date" id="ob_start" value="${r.start_date ? obYmd(obDate(r.start_date)) : defaultDate}"></div>
       <div class="field"><label for="ob_end">Tarikh tamat ${type==='OMT'?'(pilihan)':'(kosongkan jika masih aktif)'}</label><input type="date" id="ob_end" value="${r.end_date && (type!=='Outbreak' || String(r.status)==='Closed' || !obIsActive(r)) && obYmd(obDate(r.end_date)) !== obYmd(obDate(r.start_date)) ? obYmd(obDate(r.end_date)) : ''}"></div>
@@ -2450,10 +2477,14 @@ async function saveOutbreakRecord(type, id){
   const res = id ? await apiPost('updateOutbreakRecord', Object.assign({ record_id: id }, data)) : await apiPost('createOutbreakRecord', data);
   if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message || 'cuba lagi')); return; }
   closeModal();
-  const y = obDate(start).getFullYear();
-  if(y !== obYear) obYear = y;   // jump to the year of the record so it is visible
+  // stay on the year being viewed if the record touches it (e.g. 19/12/25 – 14/1/26 is shown
+  // in January of 2026 too); only jump when the record is entirely in another year
+  const y1 = obDate(start).getFullYear();
+  const y2 = data.end_date ? obDate(data.end_date).getFullYear() : (type === 'Outbreak' ? new Date().getFullYear() : y1);
+  if(obYear < y1 || obYear > y2) obYear = y1;
   await loadOutbreak();
-  showToast('✓ Disimpan — ' + ward + ', ' + obDate(start).getDate() + ' ' + MONTHS[obDate(start).getMonth()]);
+  const fmt = d=>obDate(d).getDate() + ' ' + CAL_MONTHS[obDate(d).getMonth()] + ' ' + obDate(d).getFullYear();
+  showToast('✓ Disimpan — ' + ward + ', ' + fmt(start) + (data.end_date && data.end_date !== start ? ' – ' + fmt(data.end_date) : (type === 'Outbreak' && !data.end_date ? ' – kini' : '')));
 }
 async function deleteOutbreakRecord(id){
   if(!confirm('Padam rekod ini?')) return;
