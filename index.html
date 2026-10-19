@@ -135,6 +135,10 @@
   .ob-title{text-align:center;font-weight:700;font-size:13.5px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.02em;}
   .ob-scroll{overflow-x:auto;margin-bottom:18px;-webkit-overflow-scrolling:touch;}
   .ob-grid{display:grid;grid-template-columns:72px repeat(12,minmax(60px,1fr));min-width:800px;gap:1px;background:var(--line);border:1px solid var(--line);font-size:10.5px;}
+  .ob-bld{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-weight:800;font-size:12.5px;letter-spacing:.3px;color:var(--ink,#3a2a1a);}
+  .ob-bld:first-child{margin-top:4px;}
+  .ob-bld span{background:#f1ece6;border-left:4px solid #b5651d;padding:4px 10px;border-radius:4px;}
+  .ob-bld em{font-style:normal;font-weight:600;font-size:11px;color:#8a7a6a;}
   .ob-grid .hcell{background:#f1ece6;font-weight:700;padding:6px 3px;text-align:center;}
   .ob-grid .wcell{background:#f1ece6;font-weight:600;padding:6px 4px;display:flex;align-items:center;position:sticky;left:0;z-index:1;}
   .ob-grid .hcell:first-child{position:sticky;left:0;z-index:2;}
@@ -996,7 +1000,7 @@
           <div></div>
           <button class="btn small" onclick="openOutbreakModal('Outbreak')">+ Add Outbreak Period</button>
         </div>
-        <div class="ob-scroll"><div class="ob-grid" id="obGridOutbreak"></div></div>
+        <div id="obGridOutbreak"></div>
         <div class="ob-legend" id="obLegend"></div>
       </div>
 
@@ -1006,7 +1010,7 @@
           <div></div>
           <button class="btn small" onclick="openOutbreakModal('OMT')">+ Add OMT Date</button>
         </div>
-        <div class="ob-scroll"><div class="ob-grid" id="obGridOMT"></div></div>
+        <div id="obGridOMT"></div>
       </div>
 
       <div class="panel">
@@ -1040,7 +1044,12 @@ let taskViewMode = 'today';
 let cache = { tasks:[], outbreak:[], omt:[], links:[], activities:[], attendance:[], memos:[] };
 
 const MONTHS = ['JAN','FEB','MAC','APR','MAY','JUN','JULY','AUG','SEPT','OCT','NOV','DEC'];
-const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 5','WAD 6','WAD 7','WAD 8','ICU'];
+const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 5','WAD 6','WAD 6 ISO','WAD 7','WAD 8','ICU'];
+// Bangunan WCC (Women & Children Centre) — wad tetap dalam jadual WCC
+const WARDS_WCC = ['PICU','SCN','NICU','ICU (WCC)','LABOUR ROOM','WAD 6A','WAD 6B','WAD 7A','WAD 7B','WAD 8A','WAD 8B'];
+// unit lain — boleh dipilih; baris muncul dalam jadual hanya bila ada rekod
+const UNITS_MAIN = ['JABATAN KECEMASAN','DAY CARE','BILIK PEMBEDAHAN','SKOP ROOM','KLINIK PAKAR 1','KLINIK PAKAR 2','KLINIK DADA','JABATAN PERGIGIAN','UNIT PHYSIO','UNIT CSSU','JAB. RADIOLOGI','FARMASI','MAKMAL PATOLOGI','JAB. DIETETIK & SAJIAN','UNIT TERAPI CARA KERJA','MORTUARY'];
+const UNITS_WCC = ['JABATAN KECEMASAN (WCC)','BILIK PEMBEDAHAN (WCC)','PAC','KLINIK PENYAKIT BERJANGKIT','UNIT REHABILITASI','UNIT FISIOTERAPI','UNIT CSSU (WCC)','JAB. RADIOLOGI (WCC)','MAKMAL PATOLOGI (WCC)','JAB. DIETETIK & SAJIAN (WCC)','UNIT TERAPI CARA KERJA (WCC)','MORTUARY (WCC)'];
 
 const STAFF_LIST = [
   { name:'Dr Aneesa', role:'Infection Control Officer, UKI' },
@@ -2373,20 +2382,42 @@ async function obSaveClose(id){
   if(!res.success){ btn.disabled = false; btn.textContent = 'Tutup outbreak'; alert('Gagal simpan: ' + (res.message||'')); return; }
   closeModal(); await loadOutbreak(); showToast('✓ Outbreak ditutup pada ' + obLabel(obDate(d)));
 }
-// wards shown = the standard list + any other ward that has a record (e.g. SCN, NICU)
-function obWards(){
-  const extra = [];
-  (cache.outbreak||[]).concat(cache.omt||[]).forEach(r=>{ const w = String(r.ward||'').trim(); if(w && WARDS.indexOf(w) < 0 && extra.indexOf(w) < 0) extra.push(w); });
-  return WARDS.concat(extra.sort());
+// tidy typed names: "W 6A" / "W. SCN" / "w6a" -> "WAD 6A" / "SCN"
+function obNormWard(w){
+  let x = String(w||'').trim().toUpperCase().replace(/\s+/g,' ');
+  x = x.replace(/^W\.\s*(?=[A-Z])/,'');
+  x = x.replace(/^(?:W|WAD|WARD)\s*\.?\s*(\d+[A-Z]?)\b/,'WAD $1');
+  if(x === 'WCC ICU' || x === 'ICU WCC') x = 'ICU (WCC)';
+  return x;
 }
+// which building a ward belongs to
+function obBuilding(w){
+  const x = obNormWard(w);
+  if(WARDS_WCC.indexOf(x) >= 0 || UNITS_WCC.indexOf(x) >= 0 || /WCC/.test(x)) return 'WCC';
+  return 'MAIN';
+}
+function obRecWard(r){ return obNormWard(r.ward); }
+// wards shown = the fixed list for that building + any other ward/unit that has a record
+function obWards(bld){
+  const extra = [], base = bld === 'WCC' ? WARDS_WCC : bld === 'MAIN' ? WARDS : WARDS.concat(WARDS_WCC);
+  (cache.outbreak||[]).concat(cache.omt||[]).forEach(r=>{ const w = obRecWard(r); if(!w || base.indexOf(w) >= 0 || extra.indexOf(w) >= 0) return; if(bld && obBuilding(w) !== bld) return; extra.push(w); });
+  return base.concat(extra.sort());
+}
+const OB_BLD_LABEL = { MAIN: 'BANGUNAN UTAMA (MAIN BUILDING)', WCC: 'BANGUNAN WCC' };
 function renderObGrid(elId, records, type){
+  document.getElementById(elId).innerHTML = ['MAIN','WCC'].map(b=>{
+    const n = records.filter(r=>obBuilding(r.ward) === b).length;
+    return `<div class="ob-bld"><span>${OB_BLD_LABEL[b]}</span>${n ? `<em>${n} rekod</em>` : ''}</div><div class="ob-scroll"><div class="ob-grid">${obGridHtml(b, records, type)}</div></div>`;
+  }).join('');
+}
+function obGridHtml(bld, records, type){
   let html = '<div class="hcell"></div>' + MONTHS.map(m=>`<div class="hcell">${m}</div>`).join('');
-  obWards().forEach(ward=>{
+  obWards(bld).forEach(ward=>{
     html += `<div class="wcell">${obEsc(ward)}</div>`;
     for(let m=0; m<12; m++){
       const monthStart = new Date(obYear, m, 1), monthEnd = new Date(obYear, m+1, 0, 23, 59);
       const recs = records.filter(r=>{
-        if(String(r.ward||'').trim() !== ward) return false;
+        if(obRecWard(r) !== ward) return false;
         const s = obDate(r.start_date), e = obEnd(r);
         return s <= monthEnd && e >= monthStart;
       });
@@ -2408,7 +2439,7 @@ function renderObGrid(elId, records, type){
       }
     }
   });
-  document.getElementById(elId).innerHTML = html;
+  return html;
 }
 const OB_ORGS = ['CRE','MRSA','RSV','Influenza','COVID-19','MRO-ACB','VRE','ESBL','C. difficile','Norovirus','Varicella','TB','Scabies'];
 const OB_ORG_COLORS = { 'CRE':'#d32f2f', 'MRSA':'#7b1fa2', 'RSV':'#1565c0', 'INFLUENZA':'#00838f', 'COVID-19':'#5d4037', 'MRO-ACB':'#c2185b', 'VRE':'#ef6c00', 'ESBL':'#2e7d32', 'C. DIFFICILE':'#6d4c41', 'NOROVIRUS':'#455a64', 'VARICELLA':'#ad1457', 'TB':'#37474f', 'SCABIES':'#827717' };
@@ -2425,14 +2456,21 @@ function obEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</
 function openOutbreakModal(type, existing, presetWard, presetMonth){
   const r = existing || {};
   const defaultDate = (presetMonth!==undefined) ? obYmd(new Date(obYear, presetMonth, 1)) : obYmd(new Date());
-  const wards = obWards(), cur = r.ward || presetWard || wards[0];
+  const cur = r.ward ? obNormWard(r.ward) : (presetWard || WARDS[0]);
+  const grp = (label, list)=>`<optgroup label="${label}">${list.map(w=>`<option ${cur===w ? 'selected':''}>${obEsc(w)}</option>`).join('')}</optgroup>`;
+  const used = WARDS.concat(WARDS_WCC, UNITS_MAIN, UNITS_WCC);
+  const extraM = obWards('MAIN').filter(w=>used.indexOf(w) < 0), extraW = obWards('WCC').filter(w=>used.indexOf(w) < 0);
+  if(cur && used.concat(extraM, extraW).indexOf(cur) < 0) (obBuilding(cur) === 'WCC' ? extraW : extraM).push(cur);
   openModal(`
     <h3>${type==='OMT' ? 'Mesyuarat OMT' : 'Tempoh Outbreak'}</h3>
     <div class="field"><label for="ob_ward">Wad / unit</label><select id="ob_ward" onchange="document.getElementById('ob_ward_other').classList.toggle('hidden', this.value!=='__other')">
-      ${wards.map(w=>`<option ${cur===w ? 'selected':''}>${obEsc(w)}</option>`).join('')}
-      <option value="__other">+ Wad lain (cth. SCN, NICU)…</option>
+      ${grp('🏥 Bangunan Utama — Wad', WARDS.concat(extraM))}
+      ${grp('🏥 Bangunan Utama — Unit lain', UNITS_MAIN)}
+      ${grp('👶 Bangunan WCC — Wad', WARDS_WCC.concat(extraW))}
+      ${grp('👶 Bangunan WCC — Unit lain', UNITS_WCC)}
+      <optgroup label="Lain-lain"><option value="__other">+ Wad lain (taip sendiri)…</option></optgroup>
     </select>
-    <input id="ob_ward_other" class="hidden" style="margin-top:8px;" placeholder="Taip nama wad, cth. SCN"></div>
+    <input id="ob_ward_other" class="hidden" style="margin-top:8px;" placeholder="Taip nama wad. Tambah (WCC) jika di bangunan WCC"></div>
     <div class="field"><label for="ob_organism">Organisma</label>
       ${type === 'Outbreak' ? `<div class="ob-orgs">${OB_ORGS.map(o=>`<button type="button" class="ob-org ${String(r.organism||'').toUpperCase() === o.toUpperCase() ? 'on' : ''}" style="--oc:${obOrgColor(o)}" onclick="document.getElementById('ob_organism').value='${o}';document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b===this))">${o}</button>`).join('')}</div>` : ''}
       <input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="${type === 'Outbreak' ? 'Pilih di atas atau taip organisma lain' : 'cth. OMT RSV SCN'}" oninput="document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b.textContent.toUpperCase()===this.value.trim().toUpperCase()))"></div>
@@ -2455,7 +2493,7 @@ function openOutbreakModal(type, existing, presetWard, presetMonth){
 }
 async function saveOutbreakRecord(type, id){
   let ward = document.getElementById('ob_ward').value;
-  if(ward === '__other') ward = document.getElementById('ob_ward_other').value.trim().toUpperCase();
+  if(ward === '__other') ward = obNormWard(document.getElementById('ob_ward_other').value);
   const start = document.getElementById('ob_start').value;
   if(!ward){ document.getElementById('ob_ward_other').focus(); return; }
   if(!start){ alert('Pilih tarikh mula.'); return; }
