@@ -131,6 +131,34 @@
   .seg button{flex:1;background:#fff;color:var(--maroon);border:none;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
   .seg button.active{background:var(--maroon);color:#fff;}
 
+  /* CATATAN / NOTES */
+  .nt-tools{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .nt-tools input{flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;}
+  .nt-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;}
+  .nt-card{display:flex;gap:12px;align-items:flex-start;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;font:inherit;color:inherit;}
+  .nt-card:hover{border-color:var(--maroon);box-shadow:0 2px 10px rgba(122,0,25,.08);}
+  .nt-date{flex-shrink:0;width:46px;text-align:center;background:#fdf3f5;color:var(--maroon);border-radius:8px;padding:5px 0;font-size:11px;font-weight:700;text-transform:uppercase;}
+  .nt-date b{display:block;font-size:19px;line-height:1.1;}
+  .nt-body{min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .nt-body strong{font-size:14.5px;line-height:1.3;}
+  .nt-body small{font-size:12.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere;}
+  .nt-body em{font-style:normal;font-size:11.5px;color:var(--muted);}
+  .nt-empty{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px dashed var(--line);border-radius:12px;padding:16px;font-size:13px;color:var(--muted);}
+  .nt-empty strong{display:block;color:var(--ink);margin-bottom:2px;}
+  .nt-topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .nt-state{margin-left:auto;font-size:12px;color:var(--muted);}
+  .nt-state.ok{color:var(--green);font-weight:600;} .nt-state.warn{color:var(--orange);font-weight:600;}
+  .nt-paper{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;max-width:900px;}
+  .nt-title{width:100%;border:none;border-bottom:2px solid var(--line);font-size:20px;font-weight:700;padding:6px 0 10px;font-family:inherit;outline:none;}
+  .nt-title:focus{border-bottom-color:var(--maroon);}
+  .nt-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px;font-size:12.5px;color:var(--muted);}
+  .nt-meta label{font-weight:600;}
+  .nt-meta input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;}
+  .nt-by{margin-left:auto;}
+  .nt-content{width:100%;min-height:260px;border:none;resize:none;font-family:inherit;font-size:14.5px;line-height:1.6;outline:none;padding:0;}
+  .nt-actions{display:flex;justify-content:flex-end;gap:8px;max-width:900px;margin-top:12px;}
+  @media (max-width:900px){ .nt-paper{padding:14px;} .nt-title{font-size:18px;} .nt-actions{position:sticky;bottom:70px;background:var(--paper);padding:8px 0;} }
+
   /* OUTBREAK GRID */
   .ob-title{text-align:center;font-weight:700;font-size:13.5px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.02em;}
   .ob-scroll{overflow-x:auto;margin-bottom:18px;-webkit-overflow-scrolling:touch;}
@@ -756,6 +784,7 @@
     <button class="bottom-navbtn active" data-view="dashboard"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span><span class="bn-label">Dashboard</span></button>
     <button class="bottom-navbtn" data-view="todo"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 2.8 2.8L16.2 9"/></svg></span><span class="bn-label">To Do</span></button>
     <button class="bottom-navbtn" data-view="attendance"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2.2.6 3.6 2.4 4 5.2"/></svg></span><span class="bn-label">Hadir</span></button>
+    <button class="bottom-navbtn" data-view="notes"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H16l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5z"/><path d="M8.5 8.5h6M8.5 12h7M8.5 15.5h4"/><path d="m14.5 18.8 4.6-4.6 1.6 1.6-4.6 4.6-2.1.5z"/></svg></span><span class="bn-label">Catatan</span></button>
     <button class="bottom-navbtn" data-view="memo"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span><span class="bn-label">Memo</span></button>
     <button class="bottom-navbtn" data-view="minit"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/></svg></span><span class="bn-label">Minit</span></button>
     <button class="bottom-navbtn" data-view="outbreak"><span class="bn-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#2e7d32" stroke-width="1.6" stroke-linecap="round"><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></g><g fill="#2e7d32"><circle cx="12" cy="2.6" r="1.3"/><circle cx="12" cy="21.4" r="1.3"/><circle cx="2.6" cy="12" r="1.3"/><circle cx="21.4" cy="12" r="1.3"/><circle cx="5.3" cy="5.3" r="1.2"/><circle cx="18.7" cy="18.7" r="1.2"/><circle cx="5.3" cy="18.7" r="1.2"/><circle cx="18.7" cy="5.3" r="1.2"/></g><circle cx="12" cy="12" r="6.2" fill="#66bb6a" stroke="#2e7d32" stroke-width="1.4"/><circle cx="10" cy="10.4" r="1.4" fill="#2e7d32"/><circle cx="14.2" cy="12.6" r="1.1" fill="#2e7d32"/><circle cx="10.8" cy="14.4" r="0.9" fill="#2e7d32"/></svg></span><span class="bn-label">Outbreak</span></button>
@@ -769,6 +798,7 @@
     <button class="navbtn active" data-view="dashboard"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span>Dashboard</button>
     <button class="navbtn" data-view="todo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 2.8 2.8L16.2 9"/></svg></span>Things To Do</button>
     <button class="navbtn" data-view="attendance"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2.2.6 3.6 2.4 4 5.2"/></svg></span>Attendance</button>
+    <button class="navbtn" data-view="notes"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H16l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5z"/><path d="M8.5 8.5h6M8.5 12h7M8.5 15.5h4"/><path d="m14.5 18.8 4.6-4.6 1.6 1.6-4.6 4.6-2.1.5z"/></svg></span>Catatan / Notes</button>
     <button class="navbtn" data-view="memo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>No. Memo / Bilangan</button>
     <button class="navbtn" data-view="minit"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/></svg></span>Minit Mesyuarat</button>
     <button class="navbtn" data-view="outbreak"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#2e7d32" stroke-width="1.6" stroke-linecap="round"><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></g><g fill="#2e7d32"><circle cx="12" cy="2.6" r="1.3"/><circle cx="12" cy="21.4" r="1.3"/><circle cx="2.6" cy="12" r="1.3"/><circle cx="21.4" cy="12" r="1.3"/><circle cx="5.3" cy="5.3" r="1.2"/><circle cx="18.7" cy="18.7" r="1.2"/><circle cx="5.3" cy="18.7" r="1.2"/><circle cx="18.7" cy="5.3" r="1.2"/></g><circle cx="12" cy="12" r="6.2" fill="#66bb6a" stroke="#2e7d32" stroke-width="1.4"/><circle cx="10" cy="10.4" r="1.4" fill="#2e7d32"/><circle cx="14.2" cy="12.6" r="1.1" fill="#2e7d32"/><circle cx="10.8" cy="14.4" r="0.9" fill="#2e7d32"/></svg></span>Monitor Outbreak</button>
@@ -862,6 +892,43 @@
             <button class="at-link" onclick="openAddAttendanceModal()"><span class="at-ico" data-ico="adduser"></span>Add Staff</button>
           </div>
           <div id="attendanceList" class="at-card at-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATATAN / NOTES -->
+    <div class="view" id="view-notes">
+      <div id="ntListView">
+        <div class="toolbar">
+          <h1 style="margin:0;">Catatan</h1>
+          <button class="btn" onclick="ntOpen(null)">+ Catatan Baru</button>
+        </div>
+        <div class="nt-tools">
+          <input id="ntSearch" placeholder="Cari tajuk atau isi catatan…" oninput="ntRender()" aria-label="Cari catatan">
+          <div class="seg" role="group" aria-label="Tunjuk catatan">
+            <button id="ntScopeMine" class="active" onclick="ntScope('mine')">Saya</button>
+            <button id="ntScopeAll" onclick="ntScope('all')">Semua</button>
+          </div>
+        </div>
+        <div id="ntList" class="nt-list"><div class="empty">Memuatkan…</div></div>
+      </div>
+      <div id="ntEditView" class="hidden">
+        <div class="nt-topbar">
+          <button class="btn secondary small" onclick="ntBack()">← Senarai catatan</button>
+          <span class="nt-state" id="ntState"></span>
+        </div>
+        <div class="nt-paper">
+          <input id="ntTitle" class="nt-title" placeholder="Tajuk catatan" maxlength="300" oninput="ntDirty()">
+          <div class="nt-meta">
+            <label for="ntDate">Tarikh</label>
+            <input type="date" id="ntDate" onchange="ntDirty()">
+            <span id="ntBy" class="nt-by"></span>
+          </div>
+          <textarea id="ntContent" class="nt-content" placeholder="Tulis catatan di sini…" oninput="ntDirty();ntGrow(this)"></textarea>
+        </div>
+        <div class="nt-actions">
+          <button class="btn secondary" id="ntDel" onclick="ntDelete()">Padam</button>
+          <button class="btn" id="ntSaveBtn" onclick="ntSave()">💾 Simpan</button>
         </div>
       </div>
     </div>
@@ -1088,7 +1155,7 @@ function ensureApi(){ return !!API_URL; }
    ============================================================ */
 const SWR_KEY = 'ipc_swr_v1';
 const SWR_FRESH_MS = 90 * 1000;           // younger than this: no refetch at all
-const SWR_CACHEABLE = ['getSettings','getCalendarReminders','getCalendarEventsRange','getDailyTasks','getActivities','getAttendance','getMemoSettings','getMemos','getOutbreakRecords','getOutbreakLinks','getMinits'];
+const SWR_CACHEABLE = ['getSettings','getCalendarReminders','getCalendarEventsRange','getDailyTasks','getActivities','getAttendance','getMemoSettings','getMemos','getOutbreakRecords','getOutbreakLinks','getMinits','getNotes'];
 // which cached lists a write makes out of date
 const SWR_INVALIDATE = {
   createDailyTask:['getDailyTasks'], updateDailyTask:['getDailyTasks'], deleteDailyTask:['getDailyTasks'],
@@ -1097,6 +1164,7 @@ const SWR_INVALIDATE = {
   addAttendance:['getAttendance'], setAttendanceStatus:['getAttendance'], markAllPresent:['getAttendance'],
   createMemo:['getMemos','getMemoSettings'], deleteMemo:['getMemos','getMemoSettings'], importMemos:['getMemos','getMemoSettings'], saveMemoSettings:['getMemos','getMemoSettings'], uploadMemoAttachment:['getMemos'],
   createOutbreakRecord:['getOutbreakRecords'], updateOutbreakRecord:['getOutbreakRecords'], deleteOutbreakRecord:['getOutbreakRecords'], createOutbreakLink:['getOutbreakLinks'], deleteOutbreakLink:['getOutbreakLinks'],
+  createNote:['getNotes'], updateNote:['getNotes'], deleteNote:['getNotes'],
   saveSetting:['getSettings'], saveMinit:['getMinits'], deleteMinit:['getMinits'], uploadMinitDocx:['getMinits']
 };
 let SWR = {};
@@ -1276,9 +1344,103 @@ function refreshCurrentView(view){
   else if(view==='todo') loadTasks();
   else if(view==='attendance') loadAttendanceView();
   else if(view==='memo') loadMemos();
+  else if(view==='notes') loadNotes();
   else if(view==='minit') loadMinits();
   else if(view==='outbreak') loadOutbreak();
 }
+
+/* ============================================================
+   CATATAN / NOTES
+   ============================================================ */
+const NT = { list: [], scope: 'mine', cur: null, dirty: false, saving: false };
+function ntYmd(v){ if(!v) return ''; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? v : obYmd(new Date(v)); }
+function ntLabel(v){ const d = obDate(ntYmd(v)); return isNaN(d) ? '' : d.getDate() + ' ' + CAL_MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+function ntScope(sc){
+  NT.scope = sc;
+  document.getElementById('ntScopeMine').classList.toggle('active', sc === 'mine');
+  document.getElementById('ntScopeAll').classList.toggle('active', sc === 'all');
+  loadNotes();
+}
+async function loadNotes(){
+  const res = await apiGet('getNotes', NT.scope === 'mine' ? { owner: currentUser() } : {});
+  NT.list = res.data || [];
+  ntRender();
+}
+function ntRender(){
+  const box = document.getElementById('ntList'); if(!box) return;
+  const q = (document.getElementById('ntSearch').value || '').trim().toLowerCase();
+  const list = NT.list.filter(n=>!q || (String(n.title||'') + ' ' + String(n.content||'')).toLowerCase().indexOf(q) > -1);
+  if(!list.length){
+    box.innerHTML = `<div class="nt-empty">📝 <div><strong>${q ? 'Tiada catatan sepadan.' : 'Belum ada catatan.'}</strong>${q ? '' : 'Tekan <b>+ Catatan Baru</b> untuk mula menulis.'}</div></div>`;
+    return;
+  }
+  box.innerHTML = list.map(n=>{
+    const prev = String(n.content||'').replace(/\s+/g,' ').trim();
+    return `<button class="nt-card" onclick="ntOpenId('${obEsc(n.note_id)}')">
+      <span class="nt-date"><b>${obDate(ntYmd(n.note_date)).getDate() || ''}</b>${isNaN(obDate(ntYmd(n.note_date))) ? '' : CAL_MONTHS[obDate(ntYmd(n.note_date)).getMonth()]}</span>
+      <span class="nt-body"><strong>${obEsc(n.title || 'Tanpa tajuk')}</strong>
+        <small>${obEsc(prev.slice(0, 140))}${prev.length > 140 ? '…' : ''}</small>
+        <em>${ntLabel(n.note_date)}${NT.scope === 'all' && n.owner ? ' · ' + obEsc(n.owner) : ''}</em></span>
+    </button>`;
+  }).join('');
+}
+function ntOpenId(id){ const n = NT.list.find(x=>String(x.note_id) === String(id)); if(n) ntOpen(n); }
+function ntOpen(n){
+  NT.cur = n ? Object.assign({}, n) : null; NT.dirty = false;
+  document.getElementById('ntTitle').value = n ? (n.title || '') : '';
+  document.getElementById('ntDate').value = n ? ntYmd(n.note_date) : obYmd(new Date());
+  const c = document.getElementById('ntContent'); c.value = n ? (n.content || '') : '';
+  document.getElementById('ntBy').textContent = n && n.owner ? 'Oleh ' + n.owner + (n.updated_at ? ' · dikemas kini ' + ntLabel(n.updated_at) : '') : '';
+  document.getElementById('ntDel').classList.toggle('hidden', !n);
+  ntState(n ? 'Disimpan' : 'Catatan baharu — belum disimpan', n ? 'ok' : '');
+  document.getElementById('ntListView').classList.add('hidden');
+  document.getElementById('ntEditView').classList.remove('hidden');
+  window.scrollTo(0, 0);
+  ntGrow(c);
+  if(!n) document.getElementById('ntTitle').focus();
+}
+function ntGrow(t){ t.style.height = 'auto'; t.style.height = Math.max(260, t.scrollHeight + 4) + 'px'; }
+function ntState(msg, cls){ const e = document.getElementById('ntState'); e.textContent = msg; e.className = 'nt-state ' + (cls || ''); }
+function ntDirty(){ if(!NT.dirty){ NT.dirty = true; ntState('Belum disimpan', 'warn'); } }
+function ntBack(){
+  if(NT.dirty && !confirm('Catatan ini belum disimpan. Keluar tanpa simpan?')) return;
+  NT.dirty = false;
+  document.getElementById('ntEditView').classList.add('hidden');
+  document.getElementById('ntListView').classList.remove('hidden');
+  ntRender(); loadNotes();
+}
+async function ntSave(){
+  if(NT.saving) return;
+  const title = document.getElementById('ntTitle').value.trim();
+  if(!title){ alert('Sila isi tajuk catatan.'); document.getElementById('ntTitle').focus(); return; }
+  const data = { title, note_date: document.getElementById('ntDate').value || obYmd(new Date()), content: document.getElementById('ntContent').value };
+  NT.saving = true; const btn = document.getElementById('ntSaveBtn'); btn.disabled = true;
+  mnSavePopup('busy');
+  const res = NT.cur && NT.cur.note_id ? await apiPost('updateNote', Object.assign({ note_id: NT.cur.note_id }, data))
+                                       : await apiPost('createNote', Object.assign({ owner: currentUser() }, data));
+  NT.saving = false; btn.disabled = false;
+  if(!res.success){ mnSavePopup('err', res.message || 'Cuba lagi'); ntState('Gagal disimpan', 'warn'); return; }
+  const saved = Object.assign({}, NT.cur || { owner: currentUser() }, data, res.data && res.data.note_id ? { note_id: res.data.note_id } : {}, { updated_at: new Date().toISOString() });
+  NT.cur = saved; NT.dirty = false;
+  const i = NT.list.findIndex(x=>x.note_id === saved.note_id);
+  if(i > -1) NT.list[i] = saved; else NT.list.unshift(saved);
+  document.getElementById('ntDel').classList.remove('hidden');
+  document.getElementById('ntBy').textContent = 'Oleh ' + (saved.owner || currentUser()) + ' · dikemas kini ' + ntLabel(saved.updated_at);
+  ntState('✓ Disimpan ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }), 'ok');
+  mnSavePopup('ok', '“' + title.slice(0, 40) + '”');
+}
+async function ntDelete(){
+  if(!NT.cur || !NT.cur.note_id) return;
+  if(!confirm('Padam catatan "' + (NT.cur.title || '') + '"?')) return;
+  const res = await apiPost('deleteNote', { note_id: NT.cur.note_id });
+  if(!res.success){ alert('Gagal padam: ' + (res.message || '')); return; }
+  NT.list = NT.list.filter(x=>x.note_id !== NT.cur.note_id);
+  NT.dirty = false; ntBack(); showToast('Catatan dipadam');
+}
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !document.getElementById('ntEditView').classList.contains('hidden') && document.getElementById('view-notes').classList.contains('active')){ e.preventDefault(); ntSave(); }
+});
+window.addEventListener('beforeunload', e=>{ if(NT.dirty){ e.preventDefault(); e.returnValue = ''; } });
 
 /* ============================================================
    MODAL HELPERS
