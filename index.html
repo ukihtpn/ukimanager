@@ -135,6 +135,19 @@
   .ob-title{text-align:center;font-weight:700;font-size:13.5px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.02em;}
   .ob-scroll{overflow-x:auto;margin-bottom:18px;-webkit-overflow-scrolling:touch;}
   .ob-grid{display:grid;grid-template-columns:72px repeat(12,minmax(60px,1fr));min-width:800px;gap:1px;background:var(--line);border:1px solid var(--line);font-size:10.5px;}
+  .ob-chks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;}
+  .ob-date-edit{background:none;border:0;border-bottom:1px dashed #7a0019;padding:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;}
+  .ob-date-edit:hover{color:#7a0019;}
+  .ob-chk{border:1.5px solid;border-radius:8px;padding:5px 9px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;text-align:left;line-height:1.25;background:#fff;}
+  .ob-chk small{display:block;font-weight:500;font-size:10.5px;opacity:.85;}
+  .ob-chk.ok{background:#e8f5e9;border-color:#2e7d32;color:#1b5e20;}
+  .ob-chk.no{background:#fdecea;border-color:#c62828;color:#b71c1c;}
+  .ob-chk.static{cursor:default;}
+  .ob-chk:not(.static):hover{filter:brightness(.96);}
+  .ob-todo{background:#fff;border:1px dashed #c62828;border-radius:8px;padding:7px 9px;margin:6px 0;font-size:11.5px;display:flex;flex-direction:column;gap:3px;}
+  .ob-todo a{color:#7a0019;font-weight:700;}
+  .ob-why{color:#8a7a6a;font-weight:400;}
+  .ob-rem.pend{border-color:#c62828;background:#fff8f7;}
   .ob-bld{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-weight:800;font-size:12.5px;letter-spacing:.3px;color:var(--ink,#3a2a1a);}
   .ob-bld:first-child{margin-top:4px;}
   .ob-bld span{background:#f1ece6;border-left:4px solid #b5651d;padding:4px 10px;border-radius:4px;}
@@ -2300,8 +2313,43 @@ function shiftObYear(delta){ obYear += delta; loadOutbreak(); }
 function obYmd(d){ d = new Date(d); return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function obDate(v){ const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : new Date(v); }
 let OB_RECS = [];
-const OB_CLOSE_DAYS = 42;   // 6 weeks after the last positive case → closing meeting
-const OB_SOON_DAYS = 14;    // start reminding 2 weeks before
+const OB_CLOSE_DAYS = 42;   // default: 6 weeks after the last positive case (MDRO)
+const OB_SOON_DAYS = 14;    // start reminding up to 2 weeks before
+// Tempoh pemantauan selepas kes positif terakhir. MDRO = 6 minggu; lain = 2 x tempoh inkubasi maksimum.
+// Nilai lalai sahaja — boleh diubah setiap rekod dalam borang outbreak.
+const OB_MONITOR = {
+  'CRE':        { d:42, why:'MDRO — 6 minggu' },
+  'MRSA':       { d:42, why:'MDRO — 6 minggu' },
+  'MRO-ACB':    { d:42, why:'MDRO — 6 minggu' },
+  'VRE':        { d:42, why:'MDRO — 6 minggu' },
+  'ESBL':       { d:42, why:'MDRO — 6 minggu' },
+  'RSV':        { d:16, why:'2 × inkubasi (maks 8 hari)' },
+  'INFLUENZA':  { d:8,  why:'2 × inkubasi (maks 4 hari)' },
+  'COVID-19':   { d:28, why:'2 × inkubasi (maks 14 hari)' },
+  'NOROVIRUS':  { d:4,  why:'2 × inkubasi (maks 48 jam)' },
+  'VARICELLA':  { d:42, why:'2 × inkubasi (maks 21 hari)' },
+  'C. DIFFICILE':{ d:28, why:'28 hari tiada kes baharu' },
+  'SCABIES':    { d:42, why:'6 minggu (semak garis panduan)' },
+  'TB':         { d:42, why:'semak garis panduan' }
+};
+const OB_MYHUB_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSeCKOmQpSlWn3v5bZSiSgoEKQ1X1qpHfLYomFugFqBcosQN-w/viewform';
+const OB_MYHUB_TEMPLATE = 'https://docs.google.com/document/d/19Ap6GR5J8uxEJsyEZfqDvD4SxyicwCSb/edit?usp=sharing&ouid=111818773802840510033&rtpof=true&sd=true';
+function obMonitorDefault(org){
+  const k = obOrgKey(org);
+  if(OB_MONITOR[k]) return OB_MONITOR[k];
+  const hit = Object.keys(OB_MONITOR).find(x=>k.indexOf(x) === 0);
+  return hit ? OB_MONITOR[hit] : { d:OB_CLOSE_DAYS, why:'lalai 6 minggu' };
+}
+function obMonitorDays(r){ const n = parseInt(r && r.monitor_days, 10); return n > 0 ? n : obMonitorDefault(r && r.organism).d; }
+function obPeriodLabel(n){ return n % 7 === 0 && n >= 14 ? (n/7) + ' minggu' : n + ' hari'; }
+// first OMT meeting for this outbreak: same ward, on/after the outbreak start (and before it ended)
+function obFirstOMT(r, omts){
+  const w = obNormWard(r.ward), s = obAddDays(obDate(r.start_date), -7);
+  const e = obIsActive(r) ? obToday() : obAddDays(obDate(r.end_date || r.start_date), 7);
+  const hits = (omts||[]).filter(o=>obNormWard(o.ward) === w && obDate(o.start_date) >= s && obDate(o.start_date) <= e)
+    .sort((a,b)=>obDate(a.start_date) - obDate(b.start_date));
+  return hits[0] || null;
+}
 function obToday(){ const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
 // still running: not marked closed, and either being tracked (last positive set) or without a past end date
 function obIsActive(r){
@@ -2317,48 +2365,125 @@ function obEnd(r){
 }
 function obAddDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function obLabel(d){ return d.getDate() + ' ' + CAL_MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
-// Reminder cards: days since the last positive case, counting to 6 weeks
+// Reminder cards: days since the last positive case, counting to the organism's monitoring period
 async function renderObReminders(){
   const box = document.getElementById('obReminders'); if(!box) return;
   const yNow = new Date().getFullYear();
-  const res = obYear === yNow ? { data: cache.outbreak } : await apiGet('getOutbreakRecords', { record_type:'Outbreak', year: yNow });
-  const act = (res.data || []).filter(obIsActive);
-  if(!act.length){
-    box.innerHTML = `<div class="ob-rem-empty">⏰ <div><strong>Tiada outbreak aktif dengan peringatan 6 minggu.</strong>
-      Untuk peringatan mesyuarat penutup, tekan rekod outbreak dalam jadual (atau <b>+ Add Outbreak Period</b>), isi <b>Tarikh kes positif terakhir</b>, biarkan <b>Tarikh tamat</b> kosong dan Status <b>Aktif</b>.</div></div>`;
+  const [res, resO] = obYear === yNow ? [{ data: cache.outbreak }, { data: cache.omt }]
+    : await Promise.all([apiGet('getOutbreakRecords', { record_type:'Outbreak', year: yNow }), apiGet('getOutbreakRecords', { record_type:'OMT', year: yNow })]);
+  const all = res.data || [], omts = resO.data || [];
+  const act = all.filter(obIsActive);
+  const today = obToday();
+  // closed in the last 60 days but MyHUB report not marked as submitted
+  const pend = all.filter(r=>!obIsActive(r) && String(r.status||'') === 'Closed' && !r.myhub_date && r.end_date && (today - obDate(r.end_date)) / 86400000 <= 60);
+  if(!act.length && !pend.length){
+    box.innerHTML = `<div class="ob-rem-empty">⏰ <div><strong>Tiada outbreak aktif dengan peringatan mesyuarat penutup.</strong>
+      Untuk peringatan, tekan rekod outbreak dalam jadual (atau <b>+ Add Outbreak Period</b>), isi <b>Tarikh kes positif terakhir</b>, biarkan <b>Tarikh tamat</b> kosong dan Status <b>Aktif</b>.</div></div>`;
     return;
   }
-  const today = obToday();
+  const myhubChip = (r, i)=> r.myhub_date
+    ? `<button class="ob-chk ok" onclick="obMyhubEdit(OB_RECS[${i}])" title="Tekan untuk ubah tarikh">✓ MyHUB dihantar <small>${obLabel(obDate(r.myhub_date))} ✏️</small></button>`
+    : `<button class="ob-chk no" onclick="obMyhubSubmit(OB_RECS[${i}])">✗ MyHUB belum dihantar <small>tekan untuk hantar ↗</small></button>`;
   const cards = act.map(r=>{
+    const total = obMonitorDays(r), soonD = Math.min(OB_SOON_DAYS, Math.max(2, Math.round(total/3))), per = obPeriodLabel(total);
     const base = obDate(r.last_positive_date || r.start_date);
     const days = Math.max(0, Math.round((today - base) / 86400000));
-    const due = obAddDays(base, OB_CLOSE_DAYS), left = OB_CLOSE_DAYS - days;
-    const st = left <= 0 ? 'due' : (left <= OB_SOON_DAYS ? 'soon' : 'watch');
-    const head = st === 'due' ? 'Sudah 6 minggu — adakan mesyuarat penutup' : st === 'soon' ? 'Hampir 6 minggu — rancang mesyuarat penutup' : 'Dalam pemantauan';
+    const due = obAddDays(base, total), left = total - days;
+    const st = left <= 0 ? 'due' : (left <= soonD ? 'soon' : 'watch');
+    const head = st === 'due' ? `Sudah ${per} — adakan mesyuarat penutup` : st === 'soon' ? `Hampir ${per} — rancang mesyuarat penutup` : 'Dalam pemantauan';
     const sub = st === 'due' ? `Tiada kes baharu sejak ${obLabel(base)} — outbreak boleh diisytiharkan tamat.`
-      : `${left} hari lagi ke 6 minggu (${obLabel(due)}).`;
-    const pct = Math.min(100, Math.round(days / OB_CLOSE_DAYS * 100));
+      : `${left} hari lagi ke ${per} (${obLabel(due)}).`;
+    const pct = Math.min(100, Math.round(days / total * 100));
     const i = OB_RECS.push(r) - 1;
+    const omt = obFirstOMT(r, omts);
     return { st, left, html: `<div class="ob-rem ${st}">
       <div class="ob-rem-top">
         <span class="ob-rem-ico" aria-hidden="true">${st === 'watch' ? '🦠' : '⏰'}</span>
         <div class="ob-rem-txt"><strong>${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</strong><em>${head}</em><small>${sub}</small></div>
-        <div class="ob-rem-day"><b>${days}</b><span>/ 42 hari</span></div>
+        <div class="ob-rem-day"><b>${days}</b><span>/ ${total} hari</span></div>
       </div>
-      <div class="ob-rem-bar" role="progressbar" aria-valuemin="0" aria-valuemax="42" aria-valuenow="${days}" aria-label="Hari sejak kes positif terakhir"><i style="width:${pct}%"></i><span style="left:${Math.round((OB_CLOSE_DAYS-OB_SOON_DAYS)/OB_CLOSE_DAYS*100)}%"></span></div>
-      <div class="ob-rem-meta">Kes positif terakhir: <strong>${r.last_positive_date ? obLabel(base) : 'belum diisi (kiraan dari tarikh mula)'}</strong></div>
+      <div class="ob-rem-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${days}" aria-label="Hari sejak kes positif terakhir"><i style="width:${pct}%"></i><span style="left:${Math.round((total-soonD)/total*100)}%"></span></div>
+      <div class="ob-rem-meta">Kes positif terakhir: <button class="ob-date-edit" onclick="obEditDates(OB_RECS[${i}])" title="Ubah tarikh">${r.last_positive_date ? obLabel(base) : 'belum diisi (kiraan dari tarikh mula)'} ✏️</button> · Pemantauan: <strong>${per}</strong> <span class="ob-why">(${obEsc(r.monitor_days ? 'ditetapkan' : obMonitorDefault(r.organism).why)})</span></div>
+      <div class="ob-chks">
+        ${omt ? `<button class="ob-chk ok" onclick="openOutbreakModal('OMT', OB_RECS[${OB_RECS.push(omt) - 1}])" title="Tekan untuk ubah tarikh OMT">✓ First OMT meeting done <small>${obLabel(obDate(omt.start_date))} ✏️</small></button>`
+              : `<button class="ob-chk no" onclick="openOutbreakModal('OMT', null, '${obEsc(obNormWard(r.ward))}')">✗ First OMT meeting belum <small>tekan untuk isi tarikh</small></button>`}
+        ${myhubChip(r, i)}
+      </div>
+      ${st === 'due' ? `<div class="ob-todo"><b>Perlu dibuat:</b>
+        <span>① Mesyuarat penutup (closing OMT)</span>
+        <span>② Laporan MyHUB — <a href="${OB_MYHUB_TEMPLATE}" target="_blank" rel="noopener">📄 template laporan</a>, simpan PDF, kemudian <a href="${OB_MYHUB_FORM}" target="_blank" rel="noopener">hantar melalui borang ↗</a></span></div>` : ''}
       <div class="ob-rem-actions">
         <button class="btn small secondary" onclick="obNewPositive(OB_RECS[${i}])">+ Ada kes positif baharu</button>
         ${st !== 'watch' ? `<button class="btn small" onclick="obCloseOutbreak(OB_RECS[${i}])">Outbreak ditutup</button>` : ''}
-        <button class="at-link" onclick="openOutbreakModal('Outbreak', OB_RECS[${i}])">Ubah</button>
+        <button class="btn small secondary" onclick="obEditDates(OB_RECS[${i}])">✏️ Ubah tarikh</button>
+        <button class="at-link" onclick="openOutbreakModal('Outbreak', OB_RECS[${i}])">Ubah semua</button>
       </div>
     </div>` };
   }).sort((a,b)=>a.left - b.left);
-  box.innerHTML = `<div class="ob-rem-head">Outbreak aktif (${act.length})</div><div class="ob-rem-list">${cards.map(c=>c.html).join('')}</div>`;
+  const pendHtml = pend.map(r=>{
+    const i = OB_RECS.push(r) - 1;
+    return `<div class="ob-rem pend"><div class="ob-rem-top"><span class="ob-rem-ico" aria-hidden="true">📝</span>
+      <div class="ob-rem-txt"><strong>${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</strong><em>Outbreak ditutup ${obLabel(obDate(r.end_date))} — laporan MyHUB belum dihantar</em>
+      <small><a href="${OB_MYHUB_TEMPLATE}" target="_blank" rel="noopener">📄 Template laporan MyHUB</a></small></div></div>
+      <div class="ob-chks">${myhubChip(r, i)}</div></div>`;
+  }).join('');
+  box.innerHTML = (act.length ? `<div class="ob-rem-head">Outbreak aktif (${act.length})</div><div class="ob-rem-list">${cards.map(c=>c.html).join('')}</div>` : '')
+    + (pend.length ? `<div class="ob-rem-head" style="margin-top:10px;">MyHUB belum dihantar (${pend.length})</div><div class="ob-rem-list">${pendHtml}</div>` : '');
+}
+function obMyhubSubmit(r){
+  window.open(OB_MYHUB_FORM, '_blank', 'noopener');
+  openModal(`<h3>Laporan MyHUB — ${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</h3>
+    <div class="mn-help" style="margin:0 0 10px;">Borang MyHUB dibuka di tab baharu. Langkah: isi <a href="${OB_MYHUB_TEMPLATE}" target="_blank" rel="noopener">template laporan</a> → simpan sebagai PDF → hantar melalui <a href="${OB_MYHUB_FORM}" target="_blank" rel="noopener">borang MyHUB</a>. Selepas hantar, tandakan di sini supaya kotak jadi hijau.</div>
+    <div class="field"><label for="mh_date">Tarikh dihantar</label><input type="date" id="mh_date" value="${obYmd(new Date())}" max="${obYmd(new Date())}"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Belum lagi</button><button class="btn" id="mh_save" onclick="obMyhubSave('${obEsc(r.record_id)}')">✓ Dah hantar</button></div>`);
+}
+async function obMyhubSave(id){
+  const d = document.getElementById('mh_date').value; if(!d) return;
+  const btn = document.getElementById('mh_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = await apiPost('updateOutbreakRecord', { record_id: id, myhub_date: d });
+  if(!res.success){ btn.disabled = false; btn.textContent = '✓ Dah hantar'; alert('Gagal simpan: ' + (res.message||'')); return; }
+  closeModal(); await loadOutbreak(); showToast('✓ MyHUB ditanda dihantar');
+}
+// quick date editor for a reminder card (start, last positive, monitoring days, MyHUB)
+function obEditDates(r){
+  const v = d=>d ? obYmd(obDate(d)) : '';
+  const def = obMonitorDefault(r.organism);
+  openModal(`<h3>Ubah tarikh — ${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</h3>
+    <div class="formgrid">
+      <div class="field"><label for="ed_start">Tarikh mula outbreak</label><input type="date" id="ed_start" value="${v(r.start_date)}"></div>
+      <div class="field"><label for="ed_last">Tarikh kes positif terakhir</label><input type="date" id="ed_last" value="${v(r.last_positive_date)}" max="${obYmd(new Date())}"></div>
+    </div>
+    <div class="formgrid">
+      <div class="field"><label for="ed_mon">Tempoh pemantauan (hari)</label><input type="number" id="ed_mon" min="1" max="365" value="${obMonitorDays(r)}"><div class="mn-help" style="margin:4px 0 0;">Lalai ${def.d} hari — ${obEsc(def.why)}</div></div>
+      <div class="field"><label for="ed_myhub">Tarikh MyHUB dihantar</label><input type="date" id="ed_myhub" value="${v(r.myhub_date)}" max="${obYmd(new Date())}"><div class="mn-help" style="margin:4px 0 0;">Kosongkan jika belum dihantar.</div></div>
+    </div>
+    <div class="mn-help" style="margin:0 0 10px;">Tarikh OMT pertama diubah dengan menekan kotak hijau "First OMT meeting" atau dalam jadual OMT.</div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="ed_save" onclick="obSaveDates('${obEsc(r.record_id)}', ${def.d})">Simpan</button></div>`);
+}
+async function obSaveDates(id, defDays){
+  const start = document.getElementById('ed_start').value, last = document.getElementById('ed_last').value;
+  const mon = parseInt(document.getElementById('ed_mon').value, 10), myhub = document.getElementById('ed_myhub').value;
+  if(!start){ alert('Pilih tarikh mula.'); return; }
+  if(last && last < start){ alert('Tarikh kes positif terakhir sebelum tarikh mula outbreak.'); return; }
+  const btn = document.getElementById('ed_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = await apiPost('updateOutbreakRecord', { record_id: id, start_date: start, last_positive_date: last, monitor_days: mon > 0 && mon !== defDays ? mon : '', myhub_date: myhub });
+  if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message||'')); return; }
+  closeModal(); await loadOutbreak(); showToast('✓ Tarikh dikemas kini');
+}
+function obMyhubEdit(r){
+  openModal(`<h3>MyHUB — ${obEsc(r.ward)}${r.organism ? ' · ' + obEsc(r.organism) : ''}</h3>
+    <div class="field"><label for="mh_date">Tarikh dihantar</label><input type="date" id="mh_date" value="${obYmd(obDate(r.myhub_date))}" max="${obYmd(new Date())}"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal();obMyhubUnmark(OB_RECS[${OB_RECS.push(r) - 1}])">Batalkan tanda</button><button class="btn secondary" onclick="closeModal()">Tutup</button><button class="btn" id="mh_save" onclick="obMyhubSave('${obEsc(r.record_id)}')">Simpan tarikh</button></div>`);
+}
+async function obMyhubUnmark(r){
+  if(!confirm('Batalkan tanda "MyHUB dihantar" untuk ' + r.ward + '?')) return;
+  const res = await apiPost('updateOutbreakRecord', { record_id: r.record_id, myhub_date: '' });
+  if(!res.success){ alert('Gagal simpan: ' + (res.message||'')); return; }
+  await loadOutbreak(); showToast('Tanda MyHUB dibatalkan');
 }
 function obNewPositive(r){
   openModal(`<h3>Kes positif baharu — ${obEsc(r.ward)}</h3>
-    <div class="mn-help" style="margin:0 0 10px;">Kiraan 6 minggu akan bermula semula dari tarikh ini.</div>
+    <div class="mn-help" style="margin:0 0 10px;">Kiraan tempoh pemantauan (${obPeriodLabel(obMonitorDays(r))}) akan bermula semula dari tarikh ini.</div>
     <div class="field"><label for="np_date">Tarikh kes positif terakhir</label><input type="date" id="np_date" value="${obYmd(new Date())}" max="${obYmd(new Date())}"></div>
     <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="np_save" onclick="obSaveNewPositive('${obEsc(r.record_id)}')">Simpan</button></div>`);
 }
@@ -2367,7 +2492,7 @@ async function obSaveNewPositive(id){
   const btn = document.getElementById('np_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
   const res = await apiPost('updateOutbreakRecord', { record_id: id, last_positive_date: d, status: 'Active', end_date: '' });
   if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message||'')); return; }
-  closeModal(); await loadOutbreak(); showToast('✓ Kiraan 6 minggu bermula dari ' + obLabel(obDate(d)));
+  closeModal(); await loadOutbreak(); showToast('✓ Kiraan pemantauan bermula dari ' + obLabel(obDate(d)));
 }
 function obCloseOutbreak(r){
   openModal(`<h3>Tutup outbreak — ${obEsc(r.ward)}</h3>
@@ -2473,8 +2598,8 @@ function openOutbreakModal(type, existing, presetWard, presetMonth){
     </select>
     <input id="ob_ward_other" class="hidden" style="margin-top:8px;" placeholder="Taip nama wad. Tambah (WCC) jika di bangunan WCC"></div>
     <div class="field"><label for="ob_organism">Organisma</label>
-      ${type === 'Outbreak' ? `<div class="ob-orgs">${OB_ORGS.map(o=>`<button type="button" class="ob-org ${String(r.organism||'').toUpperCase() === o.toUpperCase() ? 'on' : ''}" style="--oc:${obOrgColor(o)}" onclick="document.getElementById('ob_organism').value='${o}';document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b===this))">${o}</button>`).join('')}</div>` : ''}
-      <input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="${type === 'Outbreak' ? 'Pilih di atas atau taip organisma lain' : 'cth. OMT RSV SCN'}" oninput="document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b.textContent.toUpperCase()===this.value.trim().toUpperCase()))"></div>
+      ${type === 'Outbreak' ? `<div class="ob-orgs">${OB_ORGS.map(o=>`<button type="button" class="ob-org ${String(r.organism||'').toUpperCase() === o.toUpperCase() ? 'on' : ''}" style="--oc:${obOrgColor(o)}" onclick="document.getElementById('ob_organism').value='${o}';document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b===this));obMonSync()">${o}</button>`).join('')}</div>` : ''}
+      <input id="ob_organism" value="${obEsc(r.organism||'')}" placeholder="${type === 'Outbreak' ? 'Pilih di atas atau taip organisma lain' : 'cth. OMT RSV SCN'}" oninput="document.querySelectorAll('.ob-org').forEach(b=>b.classList.toggle('on', b.textContent.toUpperCase()===this.value.trim().toUpperCase()));obMonSync()"></div>
     <div class="formgrid">
       <div class="field"><label for="ob_start">Tarikh mula</label><input type="date" id="ob_start" value="${r.start_date ? obYmd(obDate(r.start_date)) : defaultDate}"></div>
       <div class="field"><label for="ob_end">Tarikh tamat ${type==='OMT'?'(pilihan)':'(kosongkan jika masih aktif)'}</label><input type="date" id="ob_end" value="${r.end_date && (type!=='Outbreak' || String(r.status)==='Closed' || !obIsActive(r)) && obYmd(obDate(r.end_date)) !== obYmd(obDate(r.start_date)) ? obYmd(obDate(r.end_date)) : ''}"></div>
@@ -2483,7 +2608,9 @@ function openOutbreakModal(type, existing, presetWard, presetMonth){
       <div class="field"><label for="ob_lastpos">Tarikh kes positif terakhir</label><input type="date" id="ob_lastpos" value="${r.last_positive_date ? obYmd(obDate(r.last_positive_date)) : ''}"></div>
       <div class="field"><label for="ob_status">Status</label><select id="ob_status"><option value="Active" ${String(r.status)!=='Closed'?'selected':''}>Aktif</option><option value="Closed" ${String(r.status)==='Closed'?'selected':''}>Ditutup</option></select></div>
     </div>
-    <div class="mn-help" style="margin:-4px 0 12px;">Peringatan mesyuarat penutup dikira 6 minggu dari kes positif terakhir.</div>` : ''}
+    <div class="field"><label for="ob_mon">Tempoh pemantauan selepas kes positif terakhir (hari)</label>
+      <div style="display:flex;gap:8px;align-items:center;"><input type="number" id="ob_mon" min="1" max="365" style="max-width:110px;" value="${obMonitorDays(r)}" data-auto="${r.monitor_days ? '0' : '1'}" oninput="this.dataset.auto='0';obMonSync(true)"><span id="ob_mon_why" class="mn-help" style="margin:0;"></span></div></div>
+    <div class="mn-help" style="margin:-4px 0 12px;">MDRO = 6 minggu (42 hari). Organisma lain = 2 × tempoh inkubasi (cth. RSV 16 hari). Diisi automatik ikut organisma — boleh ubah.</div>` : ''}
     <div class="field"><label for="ob_notes">Catatan</label><textarea id="ob_notes">${obEsc(r.notes||'')}</textarea></div>
     <div class="modal-actions">
       ${existing ? `<button class="btn secondary" onclick="deleteOutbreakRecord('${obEsc(r.record_id)}')">Padam</button>` : ''}
@@ -2491,6 +2618,15 @@ function openOutbreakModal(type, existing, presetWard, presetMonth){
       <button class="btn" id="ob_save" onclick="saveOutbreakRecord('${type}','${obEsc(r.record_id||'')}')">Simpan</button>
     </div>
   `);
+  obMonSync();
+}
+// fill the monitoring period from the organism unless the user typed their own
+function obMonSync(manual){
+  const inp = document.getElementById('ob_mon'), why = document.getElementById('ob_mon_why'); if(!inp) return;
+  const def = obMonitorDefault(document.getElementById('ob_organism').value);
+  if(!manual && inp.dataset.auto === '1') inp.value = def.d;
+  const n = parseInt(inp.value, 10) || def.d;
+  why.textContent = '= ' + obPeriodLabel(n) + (n === def.d ? ' · ' + def.why : ' · lalai ' + def.d + ' hari (' + def.why + ')');
 }
 async function saveOutbreakRecord(type, id){
   let ward = document.getElementById('ob_ward').value;
@@ -2508,6 +2644,8 @@ async function saveOutbreakRecord(type, id){
   if(type === 'Outbreak'){
     data.last_positive_date = document.getElementById('ob_lastpos').value;
     data.status = document.getElementById('ob_status').value;
+    const mon = parseInt(document.getElementById('ob_mon').value, 10), def = obMonitorDefault(data.organism).d;
+    data.monitor_days = mon > 0 && mon !== def ? mon : '';
     if(data.status === 'Closed' && !data.end_date) data.end_date = data.last_positive_date || start;
   }
   if(data.end_date && data.end_date < data.start_date){ alert('Tarikh tamat sebelum tarikh mula.'); return; }
