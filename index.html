@@ -131,6 +131,64 @@
   .seg button{flex:1;background:#fff;color:var(--maroon);border:none;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
   .seg button.active{background:var(--maroon);color:#fff;}
 
+  /* TAKWIM */
+  .tk-now{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;}
+  .tk-now-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;}
+  .tk-now-head span{font-size:12.5px;color:var(--muted);font-weight:600;}
+  .tk-now-bar{height:6px;background:#eee;border-radius:4px;margin:8px 0 10px;overflow:hidden;}
+  .tk-now-bar i{display:block;height:100%;background:var(--green);border-radius:4px;}
+  .tk-now-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 14px;}
+  .tk-now-item{display:flex;align-items:center;gap:8px;min-width:0;}
+  .tk-tick{flex-shrink:0;width:24px;height:24px;border-radius:7px;border:1.5px solid #bbb;background:#fff;color:transparent;font-weight:900;cursor:pointer;font-size:13px;line-height:1;}
+  .tk-tick.on{background:var(--green);border-color:var(--green);color:#fff;}
+  .tk-now-txt{background:none;border:0;padding:5px 0;font:inherit;font-size:13px;text-align:left;cursor:pointer;color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tk-now-txt i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .tk-now-txt em{font-style:normal;color:var(--maroon);font-weight:700;font-size:12px;}
+  .tk-now-txt em.tk-st{color:var(--orange);}
+  .tk-now-item.st-Selesai .tk-now-txt{color:var(--muted);text-decoration:line-through;}
+  .tk-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .tk-chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);}
+  .tk-chip i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tc);margin-right:5px;}
+  .tk-chip.on{background:var(--maroon);border-color:var(--maroon);color:#fff;}
+  .tk-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--muted);margin-bottom:12px;}
+  .tk-legend span{display:flex;align-items:center;gap:5px;}
+  .tk-legend .tk-bar{width:22px;height:12px;--tc:#9e9e9e;}
+  .tk-hint{margin-left:auto;font-style:italic;}
+  .tk-sec{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px 2px;margin-bottom:14px;}
+  .tk-sec-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:800;font-size:13px;}
+  .tk-sec-head span{border-left:4px solid var(--tc);padding-left:8px;}
+  .tk-sec-head em{font-style:normal;font-weight:600;font-size:11.5px;color:var(--muted);}
+  .tk-sec-head .at-link{margin-left:auto;font-size:12px;}
+  .tk-grid{display:grid;grid-template-columns:minmax(220px,2.2fr) repeat(12,minmax(44px,1fr));min-width:820px;font-size:11.5px;border-top:1px solid var(--line);}
+  .tk-hcell{padding:6px 2px;text-align:center;font-weight:700;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);background:#faf7f4;}
+  .tk-hcell.cur{background:#fdecc8;color:#7a4b00;}
+  .tk-name{position:sticky;left:0;z-index:1;background:#fff;text-align:left !important;}
+  .tk-hcell.tk-name{background:#faf7f4;z-index:2;padding-left:8px;}
+  .tk-rowname{border:0;border-bottom:1px solid var(--line);font:inherit;padding:6px 8px;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-width:0;color:inherit;}
+  .tk-rowname b{font-weight:600;font-size:12px;line-height:1.3;}
+  .tk-rowname small{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tk-rowname:hover b{color:var(--maroon);text-decoration:underline;}
+  .tk-rowname.st-Batal b{text-decoration:line-through;color:var(--muted);}
+  .tk-cell{border-bottom:1px solid var(--line);display:flex;align-items:center;cursor:pointer;min-height:36px;}
+  .tk-cell.cur{background:#fffaf0;}
+  .tk-cell:not(:has(.tk-bar)):hover{background:#f6f1ec;}
+  .tk-bar{display:flex;align-items:center;justify-content:center;width:100%;height:18px;margin:0 3px;border-radius:5px;background:color-mix(in srgb, var(--tc) 55%, #fff);color:#fff;font-weight:800;font-size:10.5px;}
+  .tk-bar.l{margin-left:0;border-top-left-radius:0;border-bottom-left-radius:0;}
+  .tk-bar.r{margin-right:0;border-top-right-radius:0;border-bottom-right-radius:0;}
+  .tk-bar.st-Selesai{background:#2e7d32;}
+  .tk-bar.st-Ditangguh{background:repeating-linear-gradient(45deg,#ef6c00 0 5px,#f7a35c 5px 10px);}
+  .tk-bar.st-Batal{background:#bdbdbd;}
+  .tk-mpick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+  .tk-mpick button,.tk-stpick button{border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:7px 0;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink);}
+  .tk-mpick button.on{background:var(--maroon);border-color:var(--maroon);color:#fff;}
+  .tk-stpick{display:flex;gap:6px;flex-wrap:wrap;}
+  .tk-stpick button{padding:7px 12px;}
+  .tk-stpick button.on.st-Dirancang{background:#607d8b;border-color:#607d8b;color:#fff;}
+  .tk-stpick button.on.st-Selesai{background:var(--green);border-color:var(--green);color:#fff;}
+  .tk-stpick button.on.st-Ditangguh{background:var(--orange);border-color:var(--orange);color:#fff;}
+  .tk-stpick button.on.st-Batal{background:#757575;border-color:#757575;color:#fff;}
+  @media (max-width:900px){ .tk-grid{grid-template-columns:150px repeat(12,40px);min-width:0;width:max-content;} .tk-hint{margin-left:0;width:100%;} .bottom-navbtn .bn-label{font-size:9px;} }
+
   /* CATATAN / NOTES */
   .nt-tools{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
   .nt-tools input{flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;}
@@ -784,6 +842,7 @@
     <button class="bottom-navbtn active" data-view="dashboard"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span><span class="bn-label">Dashboard</span></button>
     <button class="bottom-navbtn" data-view="todo"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 2.8 2.8L16.2 9"/></svg></span><span class="bn-label">To Do</span></button>
     <button class="bottom-navbtn" data-view="attendance"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2.2.6 3.6 2.4 4 5.2"/></svg></span><span class="bn-label">Hadir</span></button>
+    <button class="bottom-navbtn" data-view="takwim"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/><path d="M6.5 13h5M9.5 16.5h8"/></svg></span><span class="bn-label">Takwim</span></button>
     <button class="bottom-navbtn" data-view="notes"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H16l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5z"/><path d="M8.5 8.5h6M8.5 12h7M8.5 15.5h4"/><path d="m14.5 18.8 4.6-4.6 1.6 1.6-4.6 4.6-2.1.5z"/></svg></span><span class="bn-label">Catatan</span></button>
     <button class="bottom-navbtn" data-view="memo"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span><span class="bn-label">Memo</span></button>
     <button class="bottom-navbtn" data-view="minit"><span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/></svg></span><span class="bn-label">Minit</span></button>
@@ -798,6 +857,7 @@
     <button class="navbtn active" data-view="dashboard"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span>Dashboard</button>
     <button class="navbtn" data-view="todo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="m8 12.2 2.8 2.8L16.2 9"/></svg></span>Things To Do</button>
     <button class="navbtn" data-view="attendance"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2.2.6 3.6 2.4 4 5.2"/></svg></span>Attendance</button>
+    <button class="navbtn" data-view="takwim"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/><path d="M6.5 13h5M9.5 16.5h8"/></svg></span>Takwim UKI</button>
     <button class="navbtn" data-view="notes"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H16l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5z"/><path d="M8.5 8.5h6M8.5 12h7M8.5 15.5h4"/><path d="m14.5 18.8 4.6-4.6 1.6 1.6-4.6 4.6-2.1.5z"/></svg></span>Catatan / Notes</button>
     <button class="navbtn" data-view="memo"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>No. Memo / Bilangan</button>
     <button class="navbtn" data-view="minit"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/></svg></span>Minit Mesyuarat</button>
@@ -894,6 +954,26 @@
           <div id="attendanceList" class="at-card at-list"></div>
         </div>
       </div>
+    </div>
+
+    <!-- TAKWIM -->
+    <div class="view" id="view-takwim">
+      <div class="toolbar">
+        <h1 style="margin:0;">Takwim UKI</h1>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn secondary small" onclick="shiftTkYear(-1)" aria-label="Tahun sebelum">‹</button>
+          <strong id="tkYear" style="font-size:15px;">2026</strong>
+          <button class="btn secondary small" onclick="shiftTkYear(1)" aria-label="Tahun seterusnya">›</button>
+          <button class="btn" onclick="tkOpen(null)">+ Aktiviti</button>
+        </div>
+      </div>
+      <div id="tkNow"></div>
+      <div class="nt-tools">
+        <input id="tkSearch" placeholder="Cari aktiviti, PIC atau tempat…" oninput="tkRender()" aria-label="Cari aktiviti takwim">
+      </div>
+      <div class="tk-chips" id="tkChips"></div>
+      <div class="tk-legend"><span><i class="tk-bar"></i>Dirancang</span><span><i class="tk-bar st-Selesai"></i>Selesai</span><span><i class="tk-bar st-Ditangguh"></i>Ditangguh</span><span><i class="tk-bar st-Batal"></i>Batal</span><span class="tk-hint">Tekan aktiviti untuk ubah · tekan kotak kosong untuk tambah bulan</span></div>
+      <div id="tkBody"><div class="empty">Memuatkan…</div></div>
     </div>
 
     <!-- CATATAN / NOTES -->
@@ -1155,7 +1235,7 @@ function ensureApi(){ return !!API_URL; }
    ============================================================ */
 const SWR_KEY = 'ipc_swr_v1';
 const SWR_FRESH_MS = 90 * 1000;           // younger than this: no refetch at all
-const SWR_CACHEABLE = ['getSettings','getCalendarReminders','getCalendarEventsRange','getDailyTasks','getActivities','getAttendance','getMemoSettings','getMemos','getOutbreakRecords','getOutbreakLinks','getMinits','getNotes'];
+const SWR_CACHEABLE = ['getSettings','getCalendarReminders','getCalendarEventsRange','getDailyTasks','getActivities','getAttendance','getMemoSettings','getMemos','getOutbreakRecords','getOutbreakLinks','getMinits','getNotes','getTakwim'];
 // which cached lists a write makes out of date
 const SWR_INVALIDATE = {
   createDailyTask:['getDailyTasks'], updateDailyTask:['getDailyTasks'], deleteDailyTask:['getDailyTasks'],
@@ -1164,6 +1244,7 @@ const SWR_INVALIDATE = {
   addAttendance:['getAttendance'], setAttendanceStatus:['getAttendance'], markAllPresent:['getAttendance'],
   createMemo:['getMemos','getMemoSettings'], deleteMemo:['getMemos','getMemoSettings'], importMemos:['getMemos','getMemoSettings'], saveMemoSettings:['getMemos','getMemoSettings'], uploadMemoAttachment:['getMemos'],
   createOutbreakRecord:['getOutbreakRecords'], updateOutbreakRecord:['getOutbreakRecords'], deleteOutbreakRecord:['getOutbreakRecords'], createOutbreakLink:['getOutbreakLinks'], deleteOutbreakLink:['getOutbreakLinks'],
+  createTakwim:['getTakwim'], updateTakwim:['getTakwim'], deleteTakwim:['getTakwim'], importTakwim:['getTakwim'],
   createNote:['getNotes'], updateNote:['getNotes'], deleteNote:['getNotes'],
   saveSetting:['getSettings'], saveMinit:['getMinits'], deleteMinit:['getMinits'], uploadMinitDocx:['getMinits']
 };
@@ -1345,8 +1426,206 @@ function refreshCurrentView(view){
   else if(view==='attendance') loadAttendanceView();
   else if(view==='memo') loadMemos();
   else if(view==='notes') loadNotes();
+  else if(view==='takwim') loadTakwim();
   else if(view==='minit') loadMinits();
   else if(view==='outbreak') loadOutbreak();
+}
+
+// Data asal dari fail TAKWIM_2026_UKI_HKJ.xlsx (untuk import kali pertama sahaja)
+const TK_SEED_2026 = [
+  ['Surveilans & Audit','HH Self Assessment Framework','1'],
+  ['Surveilans & Audit','IPC Assessment Framework','2'],
+  ['Surveilans & Audit','Infection Prevention and Control (IPC) Audit','3,4,5,6,7,8,9'],
+  ['Surveilans & Audit','Point Prevalence Survey (PPS) on HAI & Antibiotics + CABSI MPSG','10'],
+  ['Surveilans & Audit','Surveilans MDRO & MRSA Bacteremia (MRSAB)','1,2,3,4,5,6,7,8,9,10,11,12'],
+  ['Surveilans & Audit','Hand Hygiene Compliance Surveillance + MPSG','1,2,3,4,5,6,7,8,9,10,11,12'],
+  ['Surveilans & Audit','Surgical Site Infection Surveillance','1,2,3,4,5,6,7,8,9,10,11,12'],
+  ['Surveilans & Audit','Biomedical Equipment Committee — semak checklist & metodologi audit (bersama ICN Fatimah)','1,2,3'],
+  ['Surveilans & Audit','Biomedical Equipment Cleaning Audit in ICU','4,8,12'],
+  ['Surveilans & Audit','Environmental Cleaning Audit in ICU','2,3,4,5,6,7,8,9,10,11,12'],
+  ['Surveilans & Audit','N95 Fit Test','1,2,3,4,5,6,7,8,9,10,11,12'],
+  ['Projek QI','Reducing CLABSI Rate in Medical & CLABSI Surveillance (Medical)','1,2,3,4,5,6,7,8,9,10,11,12',{pic:'Dr Aneesa'}],
+  ['Program Hand Hygiene','Monthly Hand Hygiene Audit','3,4,5,6,7,8,9,10,11,12'],
+  ['Program Hand Hygiene','Audit Hand Hygiene','1,2,3,4,5,6,7,8,9,10,11,12'],
+  ['Program Hand Hygiene','Ward Infrastructure Survey (Jan–Mac, Jul–Sept)','1,2,3,7,8,9'],
+  ['Program Hand Hygiene','ABHR Consumption Study','1,2,3,4,5,6,7,8,9',{pic:'ICN incharge setiap wad, Medical Record Office, Farmasi'}],
+  ['Pemantauan & Grand Round','Grand Round IPC — Wad Kecemasan','2',{event_date:'2026-02-20',pic:'Dr Saihah / Dr Aneesa'}],
+  ['Pemantauan & Grand Round','Grand Round IPC — OT','4',{event_date:'2026-04-22',pic:'Dr Saihah / Dr Aneesa'}],
+  ['Pemantauan & Grand Round','Grand Round IPC — OMFS & SCD','7',{event_date:'2026-07-03',pic:'Dr Saihah / Dr Aneesa'}],
+  ['Pemantauan & Grand Round','Grand Round IPC — Wad (belum ditetapkan)','9',{pic:'Dr Saihah / Dr Aneesa'}],
+  ['Pemantauan & Grand Round','Grand Round IPC (belum ditetapkan)','11',{pic:'Dr Saihah / Dr Aneesa'}],
+  ['Pemantauan & Grand Round','AMS Round (oleh AMS Team)','1,2,3,4,5,6,7,8,9,10,11,12',{pic:'Semua ahli UKI'}],
+  ['Pemantauan & Grand Round','Pemantauan kawalan infeksi mengikut zon yang ditetapkan','1,2,3,4,5,6,7,8,9,10,11,12',{pic:'ICN & MO mengikut zon'}],
+  ['Pemantauan & Grand Round','Outbreak Investigation & Management','1,2,3,4,5,6,7,8,9,10,11,12',{pic:'Semua ahli UKI'}],
+  ['Mesyuarat','Mesyuarat HIACC Bil 1/2026','3',{event_date:'2026-03-10',venue:'Bilik Mesyuarat Utama'}],
+  ['Mesyuarat','Mesyuarat HIACC Bil 2/2026','11'],
+  ['Mesyuarat','Mesyuarat Link Nurse Bil 1','2',{event_date:'2026-02-03',venue:'Dewan Permaisuri'}],
+  ['Mesyuarat','Mesyuarat Link Nurse Bil 2','7'],
+  ['Mesyuarat','Departmental IPC Meeting (setiap Jumaat)','3,4,5,6,7,8,9,10,11,12'],
+  ['Mesyuarat','State Infection Control & Antibiotic Committee (SIACC)','3,11'],
+  ['Mesyuarat','Mesyuarat Penyelaras (Nursing) IPC Selangor','11'],
+  ['Mesyuarat','National Infection Control & Antibiotic Committee (1x setahun)','6'],
+  ['Kursus / Bengkel UKI','BSI Prevention Workshop for Nursing Leaders','2',{event_date:'2026-02-09',time:'8AM–10AM',venue:'Dewan Akasia',pic:'UKI'}],
+  ['Kursus / Bengkel UKI','Internal Training for PPE Ebola','4',{event_date:'2026-04-20'}],
+  ['Kursus / Bengkel UKI','Bengkel Management of CP-CRE in Healthcare Setting','4',{event_date:'2026-04-27',time:'9AM–1PM',venue:'Pejabat UKI'}],
+  ['Kursus / Bengkel UKI','Sambutan Kempen Hand Hygiene 2026','5',{event_date:'2026-05-18',venue:'Bilik Mesyuarat Azalea'}],
+  ['Kursus / Bengkel UKI','PPE Training for Ebola','6',{venue:'Dewan Akasia',notes:'Dalam Excel: 29 Jun; 22/6/26 PPE training WCC Dewan Akasia; tarikh 3/6/26 — sila sahkan'}],
+  ['Kursus / Bengkel UKI','Kursus Link Nurse 2 hari','7',{event_date:'2026-07-21',venue:'Dewan Bistari',notes:'21 & 22/7/2026'}],
+  ['Kursus / Bengkel UKI','Kursus Kawalan Infeksi untuk PPK & ICAMS untuk MO','8',{event_date:'2026-08-26',venue:'Dewan Akasia',notes:'PPK 26/8/26, ICAMS MO 27/8/26'}],
+  ['Kursus / Bengkel UKI','Healthcare Environment Hygiene','10',{event_date:'2026-10-07',venue:'Dewan Bistari',notes:'KIV 14 & 15/10/26'}],
+  ['Kursus / Bengkel UKI','World AMR Awareness Week (WAAW)','11'],
+  ['Kursus / Bengkel UKI','New Staff Orientation (Unit Pengurusan PPS)','1',{notes:'Peserta: 25'}],
+  ['Kursus Luar / KKM','WHHD Campaign peringkat KKM','5',{event_date:'2026-05-05',venue:'HPUPM',pic:'Dr Zaila (speaker), ICN Rosena (peserta)',notes:'5 & 6 Mei 2026. Anjuran KKM. Percuma'}],
+  ['Kursus Luar / KKM','Asia Pacific Congress on Infection Control (APSIC)','7,8',{event_date:'2026-07-30',venue:'Kuala Lumpur Convention Centre',pic:'Semua ahli UKI + Dr Siti Fazilah (mikrobiologi)',notes:'30 Jul – 2 Ogos 2026. KKM sponsored x2, AMR warrant x2, APSIC award winner nurses x2'}],
+  ['Kursus Staf UKI','Dr Siti Saihah — APSIC 2026','7',{event_date:'2026-07-30',notes:'30/7/26 – 2/8/26'}],
+  ['Kursus Staf UKI','KUP Rosena — TOT Auditor HH anjuran KKM','5',{event_date:'2026-05-05',venue:'HPUPM'}],
+  ['Kursus Staf UKI','KUP Rosena — Bengkel ISO STRIDE','6',{event_date:'2026-06-09',notes:'9–10/6/2026'}]
+].map(r=>Object.assign({ year:'2026', category:r[0], title:r[1], months:r[2], status:'Dirancang' }, r[3] || {}));
+
+/* ============================================================
+   TAKWIM (Gantt chart tahunan UKI)
+   ============================================================ */
+const TK_CATS = ['Surveilans & Audit','Projek QI','Program Hand Hygiene','Pemantauan & Grand Round','Mesyuarat','Kursus / Bengkel UKI','Kursus Luar / KKM','Kursus Staf UKI','Lain-lain'];
+const TK_CAT_COLORS = { 'Surveilans & Audit':'#c2185b', 'Projek QI':'#1565c0', 'Program Hand Hygiene':'#00838f', 'Pemantauan & Grand Round':'#6a1b9a', 'Mesyuarat':'#ef6c00', 'Kursus / Bengkel UKI':'#2e7d32', 'Kursus Luar / KKM':'#5d4037', 'Kursus Staf UKI':'#455a64', 'Lain-lain':'#757575' };
+const TK_STATUS = { 'Dirancang':{ ico:'', lbl:'Dirancang' }, 'Selesai':{ ico:'✓', lbl:'Selesai' }, 'Ditangguh':{ ico:'⏸', lbl:'Ditangguh' }, 'Batal':{ ico:'✕', lbl:'Batal' } };
+const TK = { year: new Date().getFullYear(), list: [], cat: '', q: '' };
+function tkMonths(t){ return String(t.months || '').split(/[,;\s]+/).map(Number).filter(n=>n >= 1 && n <= 12); }
+function tkColor(c){ return TK_CAT_COLORS[c] || TK_CAT_COLORS['Lain-lain']; }
+function tkDateLbl(v){ if(!v) return ''; const d = obDate(ntYmd(v)); return isNaN(d) ? '' : d.getDate() + ' ' + CAL_MONTHS[d.getMonth()]; }
+function shiftTkYear(n){ TK.year += n; loadTakwim(); }
+async function loadTakwim(){
+  document.getElementById('tkYear').textContent = TK.year;
+  const res = await apiGet('getTakwim', { year: TK.year });
+  TK.list = res.data || [];
+  tkRender();
+}
+function tkFilter(cat){ TK.cat = TK.cat === cat ? '' : cat; tkRender(); }
+function tkRender(){
+  const box = document.getElementById('tkBody'); if(!box) return;
+  const now = new Date(), curM = now.getFullYear() === TK.year ? now.getMonth() + 1 : 0;
+  const q = (document.getElementById('tkSearch').value || '').trim().toLowerCase();
+  // category chips
+  const cats = TK_CATS.filter(c=>TK.list.some(t=>(t.category || 'Lain-lain') === c));
+  document.getElementById('tkChips').innerHTML = cats.length ? `<button class="tk-chip ${TK.cat ? '' : 'on'}" onclick="TK.cat='';tkRender()">Semua (${TK.list.length})</button>` + cats.map(c=>`<button class="tk-chip ${TK.cat === c ? 'on' : ''}" style="--tc:${tkColor(c)}" onclick="tkFilter('${obEsc(c)}')"><i></i>${obEsc(c)} (${TK.list.filter(t=>(t.category || 'Lain-lain') === c).length})</button>`).join('') : '';
+  if(!TK.list.length){
+    document.getElementById('tkNow').innerHTML = '';
+    box.innerHTML = `<div class="nt-empty">🗓️ <div><strong>Belum ada takwim untuk ${TK.year}.</strong>
+      ${TK.year === 2026 ? `Masukkan semua aktiviti dari fail Excel <b>TAKWIM 2026 UKI</b> sekali tekan, atau tambah satu-satu.<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn small" id="tkImportBtn" onclick="tkImportSeed()">📥 Import Takwim 2026 (${TK_SEED_2026.length} aktiviti)</button><button class="btn small secondary" onclick="tkOpen(null)">+ Tambah aktiviti</button></div>` : `Tekan <b>+ Aktiviti</b> untuk mula, atau <button class="at-link" onclick="tkCopyYear()">salin aktiviti dari ${TK.year - 1}</button>.`}</div></div>`;
+    return;
+  }
+  // this month
+  if(curM){
+    const nowList = TK.list.filter(t=>tkMonths(t).indexOf(curM) > -1);
+    const done = nowList.filter(t=>t.status === 'Selesai').length;
+    document.getElementById('tkNow').innerHTML = `<div class="tk-now">
+      <div class="tk-now-head"><strong>Bulan ini — ${CAL_MONTHS_LONG[curM-1]} ${TK.year}</strong><span>${done}/${nowList.length} selesai</span></div>
+      <div class="tk-now-bar"><i style="width:${nowList.length ? Math.round(done/nowList.length*100) : 0}%"></i></div>
+      <div class="tk-now-list">${nowList.length ? nowList.map(t=>{ const i = TK.list.indexOf(t); return `<div class="tk-now-item st-${obEsc(t.status||'Dirancang')}">
+        <button class="tk-tick ${t.status === 'Selesai' ? 'on' : ''}" onclick="tkQuickDone(${i})" title="${t.status === 'Selesai' ? 'Tandakan belum selesai' : 'Tandakan selesai'}" aria-label="Tandakan selesai">✓</button>
+        <button class="tk-now-txt" onclick="tkOpen(TK.list[${i}])"><i style="background:${tkColor(t.category)}"></i>${obEsc(t.title)}${t.event_date && obDate(ntYmd(t.event_date)).getMonth() + 1 === curM ? ` <em>${tkDateLbl(t.event_date)}</em>` : ''}${t.status && t.status !== 'Dirancang' && t.status !== 'Selesai' ? ` <em class="tk-st">${obEsc(t.status)}</em>` : ''}</button></div>`; }).join('') : '<div class="empty" style="padding:4px 0;">Tiada aktiviti dirancang bulan ini.</div>'}</div></div>`;
+  } else document.getElementById('tkNow').innerHTML = '';
+  // gantt per category
+  const head = `<div class="tk-hcell tk-name">Aktiviti</div>` + CAL_MONTHS.map((m,i)=>`<div class="tk-hcell ${i+1 === curM ? 'cur' : ''}">${m}</div>`).join('');
+  box.innerHTML = TK_CATS.map(cat=>{
+    if(TK.cat && TK.cat !== cat) return '';
+    const rows = TK.list.filter(t=>(t.category || 'Lain-lain') === cat || (cat === 'Lain-lain' && TK_CATS.indexOf(t.category) < 0))
+      .filter(t=>!q || (String(t.title) + ' ' + String(t.pic||'') + ' ' + String(t.venue||'')).toLowerCase().indexOf(q) > -1)
+      .sort((a,b)=>(tkMonths(a)[0]||13) - (tkMonths(b)[0]||13) || String(a.title).localeCompare(String(b.title)));
+    if(!rows.length) return '';
+    const col = tkColor(cat);
+    return `<div class="tk-sec"><div class="tk-sec-head" style="--tc:${col}"><span>${obEsc(cat)}</span><em>${rows.length}</em><button class="at-link" onclick="tkOpen(null,'${obEsc(cat)}')">+ tambah</button></div>
+      <div class="ob-scroll"><div class="tk-grid">${head}${rows.map(t=>{
+        const i = TK.list.indexOf(t), ms = tkMonths(t), st = t.status || 'Dirancang';
+        const ed = t.event_date ? obDate(ntYmd(t.event_date)) : null;
+        return `<button class="tk-name tk-rowname st-${obEsc(st)}" onclick="tkOpen(TK.list[${i}])" title="${obEsc(t.title)}"><b>${obEsc(t.title)}</b>${t.pic ? `<small>${obEsc(t.pic)}</small>` : ''}</button>` +
+          CAL_MONTHS.map((m,k)=>{
+            const on = ms.indexOf(k+1) > -1, prev = ms.indexOf(k) > -1, next = ms.indexOf(k+2) > -1;
+            if(!on) return `<div class="tk-cell ${k+1 === curM ? 'cur' : ''}" onclick="tkToggleMonth(${i},${k+1})" title="Tambah ${CAL_MONTHS[k]}"></div>`;
+            const lbl = ed && ed.getFullYear() === TK.year && ed.getMonth() === k ? ed.getDate() + '/' + (k+1) : '';
+            return `<div class="tk-cell ${k+1 === curM ? 'cur' : ''}" onclick="tkOpen(TK.list[${i}])"><span class="tk-bar st-${obEsc(st)} ${prev ? 'l' : ''} ${next ? 'r' : ''}" style="--tc:${col}">${lbl || (!prev ? (TK_STATUS[st] ? TK_STATUS[st].ico : '') : '')}</span></div>`;
+          }).join('');
+      }).join('')}</div></div></div>`;
+  }).join('') || '<div class="empty">Tiada aktiviti sepadan.</div>';
+}
+async function tkQuickDone(i){
+  const t = TK.list[i]; if(!t) return;
+  const st = t.status === 'Selesai' ? 'Dirancang' : 'Selesai';
+  t.status = st; tkRender();
+  const res = await apiPost('updateTakwim', { takwim_id: t.takwim_id, status: st });
+  if(!res.success){ alert('Gagal simpan: ' + (res.message || '')); loadTakwim(); return; }
+  showToast(st === 'Selesai' ? '✓ Ditanda selesai' : 'Ditanda belum selesai');
+}
+async function tkToggleMonth(i, m){
+  const t = TK.list[i]; if(!t) return;
+  if(!confirm('Tambah ' + CAL_MONTHS_LONG[m-1] + ' untuk "' + t.title + '"?')) return;
+  const ms = tkMonths(t).concat(m).sort((a,b)=>a-b);
+  t.months = ms.join(','); tkRender();
+  const res = await apiPost('updateTakwim', { takwim_id: t.takwim_id, months: t.months });
+  if(!res.success){ alert('Gagal simpan: ' + (res.message || '')); loadTakwim(); }
+}
+function tkOpen(t, presetCat){
+  const r = t || { category: presetCat || TK.cat || TK_CATS[0], months: String(new Date().getMonth() + 1), status: 'Dirancang' };
+  const ms = tkMonths(r);
+  openModal(`<h3>${t ? 'Aktiviti takwim' : 'Aktiviti baharu'} — ${TK.year}</h3>
+    <div class="field"><label for="tk_title">Tajuk aktiviti</label><input id="tk_title" value="${obEsc(r.title||'')}" placeholder="cth. Audit Hand Hygiene"></div>
+    <div class="field"><label for="tk_cat">Kategori</label><select id="tk_cat">${TK_CATS.map(c=>`<option ${c === r.category ? 'selected' : ''}>${obEsc(c)}</option>`).join('')}</select></div>
+    <div class="field"><label>Bulan (tekan untuk pilih)</label>
+      <div class="tk-mpick">${CAL_MONTHS.map((m,k)=>`<button type="button" class="${ms.indexOf(k+1) > -1 ? 'on' : ''}" data-m="${k+1}" onclick="this.classList.toggle('on')">${m}</button>`).join('')}</div>
+      <div style="display:flex;gap:10px;margin-top:6px;"><button type="button" class="at-link" onclick="document.querySelectorAll('.tk-mpick button').forEach(b=>b.classList.add('on'))">Pilih semua</button><button type="button" class="at-link" onclick="document.querySelectorAll('.tk-mpick button').forEach(b=>b.classList.remove('on'))">Kosongkan</button></div></div>
+    <div class="formgrid">
+      <div class="field"><label for="tk_date">Tarikh tepat (pilihan)</label><input type="date" id="tk_date" value="${r.event_date ? ntYmd(r.event_date) : ''}"></div>
+      <div class="field"><label for="tk_time">Masa (pilihan)</label><input id="tk_time" value="${obEsc(r.time||'')}" placeholder="cth. 9AM–1PM"></div>
+    </div>
+    <div class="formgrid">
+      <div class="field"><label for="tk_venue">Tempat</label><input id="tk_venue" value="${obEsc(r.venue||'')}"></div>
+      <div class="field"><label for="tk_pic">PIC / Peserta</label><input id="tk_pic" value="${obEsc(r.pic||'')}"></div>
+    </div>
+    <div class="field"><label>Status</label><div class="tk-stpick">${Object.keys(TK_STATUS).map(s=>`<button type="button" class="st-${s} ${String(r.status||'Dirancang') === s ? 'on' : ''}" data-s="${s}" onclick="document.querySelectorAll('.tk-stpick button').forEach(b=>b.classList.toggle('on', b===this))">${TK_STATUS[s].ico} ${TK_STATUS[s].lbl}</button>`).join('')}</div></div>
+    <div class="field"><label for="tk_notes">Catatan</label><textarea id="tk_notes">${obEsc(r.notes||'')}</textarea></div>
+    <div class="modal-actions">
+      ${t ? `<button class="btn secondary" onclick="tkDelete('${obEsc(t.takwim_id)}')">Padam</button>` : ''}
+      <button class="btn secondary" onclick="closeModal()">Batal</button>
+      <button class="btn" id="tk_save" onclick="tkSave('${t ? obEsc(t.takwim_id) : ''}')">Simpan</button>
+    </div>`);
+  if(!t) document.getElementById('tk_title').focus();
+}
+async function tkSave(id){
+  const title = document.getElementById('tk_title').value.trim();
+  if(!title){ alert('Sila isi tajuk aktiviti.'); return; }
+  const months = [...document.querySelectorAll('.tk-mpick button.on')].map(b=>b.dataset.m);
+  const date = document.getElementById('tk_date').value;
+  if(date && obDate(date).getFullYear() === TK.year && months.indexOf(String(obDate(date).getMonth() + 1)) < 0) months.push(String(obDate(date).getMonth() + 1));
+  if(!months.length){ alert('Pilih sekurang-kurangnya satu bulan.'); return; }
+  const stb = document.querySelector('.tk-stpick button.on');
+  const data = { year: String(TK.year), title, category: document.getElementById('tk_cat').value, months: months.map(Number).sort((a,b)=>a-b).join(','),
+    event_date: date, time: document.getElementById('tk_time').value.trim(), venue: document.getElementById('tk_venue').value.trim(),
+    pic: document.getElementById('tk_pic').value.trim(), status: stb ? stb.dataset.s : 'Dirancang', notes: document.getElementById('tk_notes').value };
+  const btn = document.getElementById('tk_save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = id ? await apiPost('updateTakwim', Object.assign({ takwim_id: id }, data)) : await apiPost('createTakwim', data);
+  if(!res.success){ btn.disabled = false; btn.textContent = 'Simpan'; alert('Gagal simpan: ' + (res.message || '')); return; }
+  closeModal(); await loadTakwim(); showToast('✓ Takwim disimpan');
+}
+async function tkDelete(id){
+  if(!confirm('Padam aktiviti ini dari takwim?')) return;
+  const res = await apiPost('deleteTakwim', { takwim_id: id });
+  if(!res.success){ alert('Gagal padam: ' + (res.message || '')); return; }
+  closeModal(); await loadTakwim(); showToast('Aktiviti dipadam');
+}
+async function tkImportSeed(){
+  const btn = document.getElementById('tkImportBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Mengimport…'; }
+  const res = await apiPost('importTakwim', { items: TK_SEED_2026 });
+  if(!res.success){ if(btn){ btn.disabled = false; btn.textContent = '📥 Import Takwim 2026'; } alert('Gagal import: ' + (res.message || '')); return; }
+  await loadTakwim(); showToast('✓ ' + ((res.data && res.data.added) || 0) + ' aktiviti diimport');
+}
+// start a new year from last year's activities (status reset, exact dates cleared)
+async function tkCopyYear(){
+  const res = await apiGet('getTakwim', { year: TK.year - 1 }, { fresh: true });
+  const items = (res.data || []).map(t=>({ year: String(TK.year), category: t.category, title: t.title, months: t.months, venue: t.venue, pic: t.pic, status: 'Dirancang' }));
+  if(!items.length){ alert('Tiada aktiviti dalam takwim ' + (TK.year - 1) + '.'); return; }
+  if(!confirm('Salin ' + items.length + ' aktiviti dari ' + (TK.year - 1) + ' ke ' + TK.year + '? Tarikh tepat dikosongkan.')) return;
+  const r2 = await apiPost('importTakwim', { items });
+  if(!r2.success){ alert('Gagal salin: ' + (r2.message || '')); return; }
+  await loadTakwim(); showToast('✓ ' + ((r2.data && r2.data.added) || 0) + ' aktiviti disalin');
 }
 
 /* ============================================================
