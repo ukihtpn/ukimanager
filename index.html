@@ -1044,7 +1044,7 @@ let taskViewMode = 'today';
 let cache = { tasks:[], outbreak:[], omt:[], links:[], activities:[], attendance:[], memos:[] };
 
 const MONTHS = ['JAN','FEB','MAC','APR','MAY','JUN','JULY','AUG','SEPT','OCT','NOV','DEC'];
-const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 5','WAD 6','WAD 6 ISO','WAD 7','WAD 8','ICU'];
+const WARDS = ['WAD 1','WAD 2','WAD 3','WAD 4','WAD 6 ISO','WAD 7','WAD 8','ICU'];
 // Bangunan WCC (Women & Children Centre) — wad tetap dalam jadual WCC
 const WARDS_WCC = ['PICU','SCN','NICU','ICU (WCC)','LABOUR ROOM','WAD 6A','WAD 6B','WAD 7A','WAD 7B','WAD 8A','WAD 8B'];
 // unit lain — boleh dipilih; baris muncul dalam jadual hanya bila ada rekod
@@ -2388,6 +2388,7 @@ function obNormWard(w){
   x = x.replace(/^W\.\s*(?=[A-Z])/,'');
   x = x.replace(/^(?:W|WAD|WARD)\s*\.?\s*(\d+[A-Z]?)\b/,'WAD $1');
   if(x === 'WCC ICU' || x === 'ICU WCC') x = 'ICU (WCC)';
+  if(x === 'WAD 6' || x === 'WAD 6ISO') x = 'WAD 6 ISO'; // Wad 6 = Wad 6 ISO
   return x;
 }
 // which building a ward belongs to
