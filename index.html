@@ -565,6 +565,14 @@
   #appToast.info{background:#1c1a19;}
   #appToast.show{opacity:1;transform:translate(-50%,0);}
   @media (min-width:901px){ #appToast{bottom:28px;} }
+  /* connection / offline status pill */
+  #netPill{display:none;position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:95;max-width:min(94vw,520px);
+    border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:#fff;background:#455a64;box-shadow:0 3px 12px rgba(0,0,0,.18);cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #netPill.show{display:block;}
+  #netPill.off{background:#37474f;}
+  #netPill.wait{background:var(--orange);}
+  #netPill.sync{background:var(--blue);}
   @media (max-width:900px){ #appToast{bottom:auto;top:calc(72px + env(safe-area-inset-top, 0px));transform:translate(-50%,-16px);} #appToast.show{transform:translate(-50%,0);} }
 
   /* MINIT v3 — steps, one-time slides, slide picker, phrases */
@@ -1197,7 +1205,10 @@
 const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycbwrNjwjOzjhrZkeRq_Bl5Gy7cdX4uTPVTm81pocOMRG9aA-gjDXUJFgwMuq_0XSEixE/exec';
 const DEFAULT_CALENDAR_ID = 'ukihtpn@moh.gov.my'; // pre-set so no one has to type this in
 
-let API_URL = localStorage.getItem('ipc_api_url') || HARDCODED_API_URL;
+// Always the URL above. An old URL saved on a phone by an earlier version
+// used to override it (so that phone kept calling an old deployment).
+let API_URL = HARDCODED_API_URL;
+try{ localStorage.removeItem('ipc_api_url'); }catch(e){}
 if(!localStorage.getItem('ipc_google_calendar_id')) localStorage.setItem('ipc_google_calendar_id', DEFAULT_CALENDAR_ID);
 let obYear = new Date().getFullYear();
 let taskViewMode = 'today';
@@ -1269,6 +1280,7 @@ function swrPersist(){
   }, 300);
 }
 function swrPut(key, res){
+  res = obOverlay(key, res);   // changes still waiting to be sent stay visible
   const prev = SWR[key];
   const same = prev && JSON.stringify(prev.r) === JSON.stringify(res);
   SWR[key] = { t: Date.now(), r: res };
@@ -1281,10 +1293,29 @@ function swrInvalidate(actions){
 }
 function swrClear(){ SWR = {}; try{ localStorage.removeItem(SWR_KEY); }catch(e){} }
 
+/* ---- network: time limits so a slow line never hangs the app ---- */
+function isOnline(){ return navigator.onLine !== false; }
+const NET_TIMEOUT = { bootstrap: 60000, getMinitFigure: 120000, getMinit: 60000, batch: 60000, recUpload: 120000,
+  uploadMinitFigure: 300000, uploadMemoAttachment: 300000, uploadMinitDocx: 300000, ocrImage: 120000, aiDraftMinit: 120000, saveMinit: 90000, translateLines: 90000 };
+async function fetchJson(url, opts, ms){
+  const ctl = window.AbortController ? new AbortController() : null;
+  const t = ctl ? setTimeout(()=>ctl.abort(), ms) : null;
+  try{
+    const res = await fetch(url, Object.assign({}, opts, ctl ? { signal: ctl.signal } : {}));
+    const txt = await res.text();
+    try{ return JSON.parse(txt); }
+    catch(e){ return { success:false, data:[], message:'Pelayan tidak menjawab dengan betul (HTTP ' + res.status + ')', __net:true }; }
+  }catch(err){
+    return { success:false, data:[], __net:true,
+      message: err && err.name === 'AbortError' ? 'Internet terlalu perlahan — tamat masa' : 'Tiada sambungan internet' };
+  }finally{ if(t) clearTimeout(t); }
+}
 async function apiFetchGet(action, params){
+  if(!isOnline()) return { success:false, data:[], message:'Tiada sambungan internet', __net:true };
   const qs = new URLSearchParams(Object.assign({ action }, params||{})).toString();
-  try{ const res = await fetch(API_URL + '?' + qs); return await res.json(); }
-  catch(err){ console.error(err); return { success:false, data:[], message:err.message }; }
+  const res = await fetchJson(API_URL + '?' + qs, {}, NET_TIMEOUT[action] || 30000);
+  if(res.__net) netNoteFail(); else netNoteOk();
+  return res;
 }
 // fetch once per key at a time; store successful replies
 function swrRevalidate(action, params){
@@ -1318,13 +1349,14 @@ async function apiGet(action, params, opts){
   if(SWR_CACHEABLE.indexOf(action) === -1 || opts.fresh){
     const res = await apiFetchGet(action, params);
     if(res.success && SWR_CACHEABLE.indexOf(action) > -1) swrPut(swrKey(action, params), res);
+    else if(res.__net && SWR[swrKey(action, params)]) return SWR[swrKey(action, params)].r;   // offline: last copy
     return res;
   }
   const key = swrKey(action, params);
   if(!SWR[key] && bootPromise){ await bootPromise; }   // the bootstrap may be bringing it
   const hit = SWR[key];
   if(hit){
-    if(Date.now() - hit.t > SWR_FRESH_MS){
+    if(Date.now() - hit.t > SWR_FRESH_MS && isOnline()){
       swrRevalidate(action, params).then(res=>{ if(res.__changed) swrScheduleRedraw(); });
     }
     return hit.r;
@@ -1332,17 +1364,213 @@ async function apiGet(action, params, opts){
   return swrRevalidate(action, params);
 }
 async function apiFetchPost(action, data){
+  if(!isOnline()) return { success:false, message:'Tiada sambungan internet', __net:true };
+  const res = await fetchJson(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ action, data }) }, NET_TIMEOUT[action] || 45000);
+  if(res.__net) netNoteFail(); else netNoteOk();
+  return res;
+}
+
+/* ============================================================
+   OFFLINE MODE — OUTBOX
+   Everyday changes (tasks, catatan, takwim, outbreak, kehadiran…) are
+   saved on the phone FIRST and shown at once, then sent to Google in
+   the background — many changes in ONE request. No internet / slow
+   internet: they wait on the phone and go out automatically when the
+   line is back. Each change has its own id, so a resend never makes a
+   duplicate row.
+   ============================================================ */
+const OFFLINE_OPS = {
+  createDailyTask:{ list:'getDailyTasks', id:'task_id', kind:'create', prefix:'TSK', def:{ status:'Pending' } },
+  updateDailyTask:{ list:'getDailyTasks', id:'task_id', kind:'update' },
+  deleteDailyTask:{ list:'getDailyTasks', id:'task_id', kind:'delete' },
+  createNote:{ list:'getNotes', id:'note_id', kind:'create', prefix:'NOTE' },
+  updateNote:{ list:'getNotes', id:'note_id', kind:'update' },
+  deleteNote:{ list:'getNotes', id:'note_id', kind:'delete' },
+  createTakwim:{ list:'getTakwim', id:'takwim_id', kind:'create', prefix:'TKW', def:{ status:'Dirancang' } },
+  updateTakwim:{ list:'getTakwim', id:'takwim_id', kind:'update' },
+  deleteTakwim:{ list:'getTakwim', id:'takwim_id', kind:'delete' },
+  createOutbreakRecord:{ list:'getOutbreakRecords', id:'record_id', kind:'create', prefix:'OTB', def:{ status:'Active', record_type:'Outbreak' } },
+  updateOutbreakRecord:{ list:'getOutbreakRecords', id:'record_id', kind:'update' },
+  deleteOutbreakRecord:{ list:'getOutbreakRecords', id:'record_id', kind:'delete' },
+  createOutbreakLink:{ list:'getOutbreakLinks', id:'link_id', kind:'create', prefix:'LNK' },
+  deleteOutbreakLink:{ list:'getOutbreakLinks', id:'link_id', kind:'delete' },
+  setAttendanceStatus:{ list:'getAttendance', kind:'attendance' },
+  deleteMemo:{ list:'getMemos', id:'memo_id', kind:'delete' }
+};
+const OB_KEY = 'ipc_outbox_v1';
+let OUTBOX = [];
+try{ OUTBOX = JSON.parse(localStorage.getItem(OB_KEY) || '[]') || []; }catch(e){ OUTBOX = []; }
+let obFlushing = false, obTimer = null, obFails = 0, obLastErr = '';
+function genId(prefix){ return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 100000); }
+function obSave(){ try{ localStorage.setItem(OB_KEY, JSON.stringify(OUTBOX)); }catch(e){} netRender(); }
+function obParams(key){
+  const p = {}, q = key.split('?')[1] || '';
+  q.split('&').forEach(kv=>{ if(!kv) return; const i = kv.indexOf('='); p[kv.slice(0, i)] = kv.slice(i + 1); });
+  return p;
+}
+function obYearOf(v){ const m = String(v||'').match(/^(\d{4})/); return m ? +m[1] : new Date(v).getFullYear(); }
+// does a NEW record belong in the list cached under these params?
+function obFits(listAction, p, o){
+  if(listAction === 'getDailyTasks' || listAction === 'getNotes') return !p.owner || String(o.owner) === String(p.owner);
+  if(listAction === 'getTakwim') return !p.year || String(o.year) === String(p.year);
+  if(listAction === 'getOutbreakRecords'){
+    if(p.record_type && String(o.record_type || 'Outbreak') !== p.record_type) return false;
+    if(!p.year) return true;
+    const y = +p.year, s = obYearOf(o.start_date);
+    const open = String(o.record_type || 'Outbreak') === 'Outbreak' && o.status !== 'Closed' && !o.end_date;
+    const e = open ? new Date().getFullYear() : obYearOf(o.end_date || o.start_date);
+    return (s <= y && e >= y) || s === y;
+  }
+  if(listAction === 'getAttendance') return String(o.activity_id) === String(p.activity_id);
+  return !p.search;
+}
+// apply one waiting change to a list (safe to apply twice)
+function obApply(list, op, p){
+  const spec = OFFLINE_OPS[op.action], d = op.data;
+  if(spec.kind === 'attendance'){
+    if(String(p.activity_id) !== String(d.activity_id)) return list;
+    const k = String(d.name||'').trim().toLowerCase();
+    const i = list.findIndex(r=>String(r.activity_id) === String(d.activity_id) && String(r.name||'').trim().toLowerCase() === k);
+    const upd = { attendance_status: d.attendance_status }; if(d.designation) upd.designation = d.designation;
+    if(i > -1){ list[i] = Object.assign({}, list[i], upd, { _pending:true }); return list; }
+    list.push(Object.assign({ attendance_id: op.qid, activity_id: d.activity_id, name: String(d.name).trim(), designation: d.designation || '', attendance_status: d.attendance_status || 'Present', _pending:true }));
+    return list;
+  }
+  const id = String(d[spec.id]);
+  const i = list.findIndex(r=>String(r[spec.id]) === id);
+  if(spec.kind === 'delete') return i > -1 ? list.filter((r, j)=>j !== i) : list;
+  if(spec.kind === 'update'){ if(i > -1) list[i] = Object.assign({}, list[i], d, { _pending:true }); return list; }
+  // create
+  const obj = Object.assign({ created_at: new Date(op.at).toISOString() }, spec.def || {}, d, { _pending:true });
+  if(i > -1) list[i] = Object.assign({}, list[i], obj);
+  else if(obFits(spec.list, p, obj)){ if(spec.list === 'getDailyTasks' || spec.list === 'getNotes') list.unshift(obj); else list.push(obj); }
+  return list;
+}
+// a list reply + every change still waiting for it
+function obOverlay(key, res){
+  if(!OUTBOX.length || !res || !res.success || !Array.isArray(res.data)) return res;
+  const action = key.split('?')[0], p = obParams(key);
+  const ops = OUTBOX.filter(op=>OFFLINE_OPS[op.action].list === action);
+  if(!ops.length) return res;
+  let list = res.data.slice();
+  ops.forEach(op=>{ list = obApply(list, op, p); });
+  return Object.assign({}, res, { data: list });
+}
+function obAdd(op){
+  OUTBOX.push(op); obSave();
+  const list = OFFLINE_OPS[op.action].list;
+  Object.keys(SWR).forEach(k=>{
+    if(k.split('?')[0] !== list) return;
+    const r = SWR[k].r;
+    if(r && r.success && Array.isArray(r.data)) SWR[k] = { t: SWR[k].t, r: Object.assign({}, r, { data: obApply(r.data.slice(), op, obParams(k)) }) };
+  });
+  swrPersist();
+}
+function obSchedule(ms){ clearTimeout(obTimer); obTimer = setTimeout(obFlush, ms == null ? 400 : ms); }
+// send everything waiting, in batches; keep what could not be sent
+async function obFlush(){
+  if(obFlushing || !OUTBOX.length || !ensureApi()) return;
+  if(!isOnline()){ netRender(); return; }
+  obFlushing = true; netRender();
+  const touched = {};
+  let changed = false;
   try{
-    const res = await fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ action, data }) });
-    return await res.json();
-  }catch(err){ console.error(err); return { success:false, message:err.message }; }
+    while(OUTBOX.length && isOnline()){
+      const batch = OUTBOX.slice(0, 25);
+      let res = await apiFetchPost('batch', { ops: batch.map(o=>({ qid:o.qid, action:o.action, data:o.data })) });
+      if(!res.success && /Unknown POST action/.test(res.message||'')){
+        // Code.gs not yet updated → send one by one (old way)
+        const results = [];
+        for(const o of batch){
+          const r = await apiFetchPost(o.action, o.data);
+          if(r.__net){ res = r; break; }
+          results.push({ qid:o.qid, ok: !!r.success, error: r.message });
+        }
+        if(results.length) res = { success:true, data:{ results } , __partial: res.__net };
+      }
+      if(!res.success){
+        obFails++; obLastErr = res.message || 'gagal';
+        obSchedule(Math.min(60000, 4000 * Math.pow(2, Math.min(obFails, 4))));
+        break;
+      }
+      obFails = 0; obLastErr = '';
+      const done = {};
+      (res.data.results || []).forEach(r=>{
+        done[r.qid] = true;
+        const op = batch.find(o=>o.qid === r.qid); if(!op) return;
+        touched[OFFLINE_OPS[op.action].list] = true;
+        if(!r.ok){
+          console.warn('Outbox op gagal', op, r.error);
+          showToast('✗ Satu perubahan tidak dapat disimpan: ' + (r.error || ''), 'err');
+        }
+      });
+      OUTBOX = OUTBOX.filter(o=>!done[o.qid]); obSave(); changed = true;
+      if(res.__partial){ obSchedule(8000); break; }
+    }
+  }finally{
+    obFlushing = false;
+    if(changed){
+      // lists now come fresh from the server next time (copy kept until then)
+      Object.keys(SWR).forEach(k=>{ if(touched[k.split('?')[0]]) SWR[k].t = 0; });
+      swrPersist();
+      if(!OUTBOX.length) showToast('✓ Semua perubahan telah dihantar', 'info');
+      swrScheduleRedraw();
+    }
+    netRender();
+  }
 }
 async function apiPost(action, data){
   if(!ensureApi()) return { success:false };
+  const spec = OFFLINE_OPS[action];
+  if(spec){
+    data = Object.assign({}, data);
+    Object.keys(data).forEach(k=>{ if(k.charAt(0) === '_') delete data[k]; });
+    if(spec.kind === 'create' && !data[spec.id]) data[spec.id] = genId(spec.prefix);
+    const op = { qid: genId('Q'), action, data, at: Date.now() };
+    obAdd(op);
+    obSchedule(isOnline() ? 400 : 0);
+    const out = spec.kind === 'create' ? Object.assign({ created_at: new Date().toISOString() }, spec.def || {}, data) : spec.kind === 'delete' ? { deleted: data[spec.id] } : Object.assign({}, data);
+    return { success:true, data: out, queued:true, message:'Disimpan dalam peranti' };
+  }
   const json = await apiFetchPost(action, data);
+  if(json.__net && !json.message) json.message = 'Tiada sambungan internet';
+  if(json.__net) json.message = json.message + ' — fungsi ini perlukan internet. Cuba lagi bila sambungan pulih.';
   if(json.success && SWR_INVALIDATE[action]) swrInvalidate(SWR_INVALIDATE[action]);
   return json;
 }
+
+/* ---- connection status pill (top of screen) ---- */
+let netBad = false;
+function netNoteFail(){ if(!netBad){ netBad = true; netRender(); } }
+function netNoteOk(){ if(netBad){ netBad = false; netRender(); } if(OUTBOX.length && !obFlushing) obSchedule(300); }
+function netRender(){
+  let el = document.getElementById('netPill');
+  if(!el){ el = document.createElement('button'); el.id = 'netPill'; el.type = 'button'; el.onclick = netDetails; document.body.appendChild(el); }
+  const n = OUTBOX.length, up = recPendingCount();
+  let txt = '', cls = '';
+  if(!isOnline()){ txt = '📴 Offline' + (n ? ' · ' + n + ' perubahan disimpan dalam peranti' : ' — data terakhir dipaparkan'); cls = 'off'; }
+  else if(obFlushing){ txt = '⏳ Menghantar ' + n + ' perubahan…'; cls = 'sync'; }
+  else if(n){ txt = '⏳ ' + n + ' perubahan menunggu dihantar' + (obLastErr ? ' (internet perlahan — cuba semula automatik)' : ''); cls = 'wait'; }
+  else if(netBad){ txt = '🐢 Internet perlahan'; cls = 'wait'; }
+  if(up) txt = (txt ? txt + ' · ' : '') + '🎙 ' + up + ' rakaman sedang dimuat naik';
+  el.textContent = txt; el.className = txt ? 'show ' + (cls || 'sync') : '';
+}
+function netDetails(){
+  const n = OUTBOX.length;
+  const names = { DailyTask:'Task', Note:'Catatan', Takwim:'Takwim', OutbreakRecord:'Outbreak', OutbreakLink:'Link', Memo:'Memo' };
+  const label = a=>{ if(a === 'setAttendanceStatus') return 'Kehadiran'; const m = a.match(/^(create|update|delete)(.*)$/); return m ? (names[m[2]] || m[2]) + ' — ' + ({ create:'baharu', update:'ubah', delete:'padam' })[m[1]] : a; };
+  openModal(`<h3>Status sambungan</h3>
+    <div class="mn-help" style="margin:0 0 10px;">${isOnline() ? (netBad ? '🐢 Internet perlahan / terputus-putus.' : '🟢 Dalam talian.') : '📴 Tiada internet. Anda masih boleh guna app — perubahan disimpan dalam peranti ini dan dihantar automatik bila internet ada.'}</div>
+    ${n ? `<div class="mn-help" style="margin:0 0 6px;"><strong>${n} perubahan menunggu dihantar:</strong></div>
+      <div style="max-height:220px;overflow:auto;font-size:13px;">${OUTBOX.map(o=>`<div style="padding:4px 0;border-bottom:1px solid #eee;">${obEsc(label(o.action))} <small style="color:#888;">${new Date(o.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</small></div>`).join('')}</div>
+      ${obLastErr ? `<div class="mn-help" style="margin:8px 0 0;color:var(--red);">Cubaan terakhir: ${obEsc(obLastErr)}</div>` : ''}` : '<div class="mn-help" style="margin:0;">✓ Tiada perubahan menunggu.</div>'}
+    ${recPendingCount() ? `<div class="mn-help" style="margin:10px 0 0;">🎙 ${recPendingCount()} rakaman mesyuarat sedang/menunggu dimuat naik (salinan selamat dalam peranti).</div>` : ''}
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Tutup</button>${n || recPendingCount() ? `<button class="btn" onclick="closeModal();obFails=0;obFlush();recKick()">Hantar sekarang</button>` : ''}</div>`);
+}
+window.addEventListener('online', ()=>{ netBad = false; netRender(); obFails = 0; obSchedule(500); if(typeof recKick === 'function') recKick(); if(typeof mnOnlineSave === 'function') mnOnlineSave(); swrScheduleRedraw(); });
+window.addEventListener('offline', ()=>netRender());
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible'){ obSchedule(300); if(typeof recKick === 'function') recKick(); } });
+setInterval(()=>{ if(OUTBOX.length) obFlush(); }, 30000);
 // Range the dashboard calendar asks for (current month ± 7 days) — the
 // bootstrap must send exactly the same strings so the cache key matches.
 function calMonthRange(y, m){
@@ -1373,6 +1601,7 @@ function bootstrapData(){
 // after login / app open: draw from the phone's copy now, refresh in one go
 function startApp(){
   renderUserbar();
+  netRender(); obSchedule(1500); recResume();
   const hadCache = Object.keys(SWR).length > 0;
   bootstrapData().then(changed=>{ if(changed && hadCache) swrScheduleRedraw(); });
   loadDashboard();
@@ -3853,7 +4082,9 @@ function mnNewItem(title){
   return { title, subs: [], content: d.content, tindakan: d.tindakan, figures: [], slides: [] };
 }
 function mnSet(key, val){ MN.data[key] = val; mnDirty(); }
+let MN_VER = 0;
 function mnDirty(){
+  MN_VER++;
   if(MN.data.status === 'Final'){ MN.data.status = 'Draf'; mnRenderStatus(); }
   ['mnSaveState','mnSaveState2'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = 'Belum disimpan'; });
   clearTimeout(mnBackupTimer);
@@ -3878,6 +4109,13 @@ async function loadMinits(){
     <div class="mn-banner">Ada perubahan belum disimpan: <strong>${mnEsc(String(b.data.title||'').split('\n')[0].slice(0,60))}</strong>
       <button class="btn small" onclick="mnRestoreBackup()">Sambung</button>
       <button class="btn small secondary" onclick="mnClearBackup();loadMinits()">Buang</button></div>` : '';
+  // recordings on this phone that belong to no saved minit (e.g. app closed before the minit was ever saved)
+  const loose = Object.values(REC_UP.metas).filter(m=>!m.minit_id && m.state !== 'recording' && m.key !== MN_REC.key);
+  if(loose.length) document.getElementById('mnBackupBanner').innerHTML += loose.map(m=>`
+    <div class="mn-banner">🎙 Rakaman ${mnEsc(new Date(m.start).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}${m.title ? ' — ' + mnEsc(m.title) : ''}
+      <small>(${m.fileId ? 'sudah di Drive, folder IPC_Manager_Minit' : 'dalam peranti'})</small>
+      <button class="btn small" onclick="recLooseSave('${m.key}')">Simpan ke peranti</button>
+      <button class="btn small secondary" onclick="recLooseForget('${m.key}')">Buang dari senarai</button></div>`).join('');
   if(!ensureApi()) return;
   const res = await apiGet('getMinits', {});
   const list = res.data || [];
@@ -3945,6 +4183,7 @@ function mnNormalize(){
   MN.data.absent = MN.data.absent || [];
   MN.data.recordings = MN.data.recordings || [];
   MN.data.items.forEach(it=>{ it.figures = it.figures || []; it.slides = it.slides || []; it.crops = it.crops || []; });
+  setTimeout(mnRecResolve, 0);
 }
 async function mnBackToList(){
   const st = document.getElementById('mnSaveState').textContent;
@@ -4880,6 +5119,55 @@ function mnRecMark(i, force){
   it.marks = it.marks || {};
   if(force || it.marks[MN_REC.key] == null){ it.marks[MN_REC.key] = Math.max(0, Math.round(mnRecElapsed()) - 3); mnDirty(); }
 }
+
+/* ---------- recording: safe copy on the phone + upload in small pieces ----------
+   Every 5 s of audio is written to the phone's storage (IndexedDB) as it is
+   recorded, and sent to Drive in 512 KB pieces while the meeting goes on.
+   • slow internet: only small pieces go out, each retried on its own;
+   • no internet: pieces wait on the phone and go out when the line is back;
+   • page closed / phone restarted: the recording is still on the phone and
+     the upload carries on next time the app is opened. */
+var REC_CH = 524288;                       // 512 KB (Drive needs multiples of 256 KB)
+var REC_UP = { busy: false, metas: {}, timer: null };
+var REC_MEM = {};                          // key → [Blob, …] in memory (this visit)
+function recPendingCount(){ return Object.values(REC_UP.metas).filter(m=>m.state === 'recording' || m.state === 'pending').length; }
+function rdb(){
+  if(!rdb.p) rdb.p = new Promise(res=>{
+    try{
+      if(!window.indexedDB) return res(null);
+      const r = indexedDB.open('ipc_rec_v1', 1);
+      r.onupgradeneeded = ()=>{ const db = r.result; db.createObjectStore('chunks', { keyPath: ['key','seq'] }); db.createObjectStore('meta', { keyPath: 'key' }); };
+      r.onsuccess = ()=>res(r.result); r.onerror = ()=>res(null); r.onblocked = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+  return rdb.p;
+}
+async function rdbDo(store, mode, fn){
+  const db = await rdb(); if(!db) return null;
+  return new Promise(res=>{
+    let req;
+    try{ const tx = db.transaction(store, mode); req = fn(tx.objectStore(store)); tx.oncomplete = ()=>res(req ? req.result : true); tx.onerror = tx.onabort = ()=>res(null); }
+    catch(e){ res(null); }
+  });
+}
+function rdbRange(key){ return IDBKeyRange.bound([key, 0], [key, Number.MAX_SAFE_INTEGER]); }
+function rdbPutChunk(key, seq, blob){ return rdbDo('chunks', 'readwrite', s=>s.put({ key, seq, blob })); }
+async function rdbGetChunks(key){ const rows = await rdbDo('chunks', 'readonly', s=>s.getAll(rdbRange(key))); return (rows || []).sort((a,b)=>a.seq - b.seq).map(r=>r.blob); }
+function rdbDelChunks(key){ return rdbDo('chunks', 'readwrite', s=>s.delete(rdbRange(key))); }
+function rdbPutMeta(m){ const c = Object.assign({}, m); return rdbDo('meta', 'readwrite', s=>s.put(c)); }
+function rdbDelMeta(key){ return rdbDo('meta', 'readwrite', s=>s.delete(key)); }
+async function rdbAllMeta(){ return (await rdbDo('meta', 'readonly', s=>s.getAll())) || []; }
+async function recBlobs(m){
+  if(!REC_MEM[m.key] || !REC_MEM[m.key].length){ const b = await rdbGetChunks(m.key); if(b.length) REC_MEM[m.key] = b; }
+  return REC_MEM[m.key] || [];
+}
+async function recLocalUrl(key){
+  if(MN_REC_URL[key]) return MN_REC_URL[key];
+  const m = REC_UP.metas[key] || { key, mime: 'audio/webm' };
+  const blobs = await recBlobs(m); if(!blobs.length) return '';
+  return (MN_REC_URL[key] = URL.createObjectURL(new Blob(blobs, { type: m.mime })));
+}
+
 async function mnRecStart(mode, item){
   mode = mode === 'session' ? 'session' : 'meeting';
   if(MN_REC.rec){ alert('Rakaman lain sedang berjalan. Hentikan dahulu.'); return; }
@@ -4889,8 +5177,20 @@ async function mnRecStart(mode, item){
   catch(e){ alert('Mikrofon tidak dapat dibuka: ' + e.message + '\nBenarkan mikrofon untuk laman ini (ikon 🔒 di sebelah alamat web).'); return; }
   const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(m=>{ try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || '';
   const rec = new MediaRecorder(stream, Object.assign({ audioBitsPerSecond: 32000 }, mime ? { mimeType: mime } : {}));
-  Object.assign(MN_REC, { rec, stream, chunks: [], start: Date.now(), key: 'R' + Date.now(), mime: rec.mimeType || mime || 'audio/webm', mode, item: mode === 'session' ? item : -1 });
-  rec.ondataavailable = e=>{ if(e.data && e.data.size) MN_REC.chunks.push(e.data); };
+  const key = 'R' + Date.now();
+  REC_MEM[key] = [];
+  Object.assign(MN_REC, { rec, stream, chunks: REC_MEM[key], start: Date.now(), key, mime: rec.mimeType || mime || 'audio/webm', mode, item: mode === 'session' ? item : -1 });
+  const meta = { key, mime: MN_REC.mime, start: MN_REC.start, lastAt: MN_REC.start, mode, item: MN_REC.item, minit_id: MN.id || '', title: String(MN.data.title||'').split('\n')[0].slice(0, 80),
+    bytes: 0, seq: 0, uploaded: 0, state: 'recording' };
+  REC_UP.metas[key] = meta; rdbPutMeta(meta);
+  rec.ondataavailable = e=>{
+    if(!e.data || !e.data.size) return;
+    const seq = meta.seq++;
+    REC_MEM[key].push(e.data);
+    meta.bytes += e.data.size; meta.lastAt = Date.now();
+    rdbPutChunk(key, seq, e.data); rdbPutMeta(meta);
+    recKick();
+  };
   rec.start(5000);
   try{ if(navigator.wakeLock) MN_REC.wake = await navigator.wakeLock.request('screen'); }catch(e){}
   if(mode === 'meeting' && MN_SESS >= 0) mnRecMark(MN_SESS, true);
@@ -4898,6 +5198,7 @@ async function mnRecStart(mode, item){
   window.addEventListener('beforeunload', mnRecWarn);
   mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll(); mnRecTick();
   showToast(mode === 'session' ? '🔴 Merakam sesi ini — tekan ⏹ bila selesai' : '🔴 Rakaman bermula — biarkan skrin terbuka', 'info');
+  if(!MN.id && isOnline()) mnSave(true);   // so the recording can be linked to this minit even after a crash
 }
 function mnRecWarn(e){ if(MN_REC.rec){ e.preventDefault(); e.returnValue = 'Rakaman masih berjalan.'; return e.returnValue; } }
 function mnRecTick(){
@@ -4914,47 +5215,179 @@ async function mnRecStop(){
   try{ R.wake && R.wake.release(); }catch(e){}
   window.removeEventListener('beforeunload', mnRecWarn);
   const dur = Math.round((Date.now() - R.start)/1000);
-  const blob = new Blob(R.chunks, { type: R.mime });
+  const blob = new Blob(REC_MEM[R.key] || R.chunks, { type: R.mime });
   const entry = { key: R.key, mime: R.mime, dur, at: new Date(R.start).toISOString(), size: blob.size };
   MN_REC_URL[R.key] = URL.createObjectURL(blob);
-  const mode = R.mode, item = R.item;
+  const mode = R.mode, item = R.item, key = R.key;
   MN_REC.rec = null; MN_REC.stream = null; MN_REC.chunks = []; MN_REC.mode = ''; MN_REC.item = -1;
   if(mode === 'session' && MN.data.items[item]){ const it = MN.data.items[item]; (it.recs = it.recs || []).push(entry); MN_SREC_KEY = entry.key; }
   else MN.data.recordings.push(entry);
-  mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll();
-  await mnRecUpload(entry, blob);
+  const meta = REC_UP.metas[key];
+  if(meta){ Object.assign(meta, { state: 'pending', dur, total: blob.size, minit_id: MN.id || meta.minit_id || '' }); rdbPutMeta(meta); }
+  mnDirty(); mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll();
+  showToast(isOnline() ? '⏹ Rakaman ' + mnFmtTime(dur) + ' disimpan dalam peranti — sedang dimuat naik ke Drive' : '⏹ Rakaman disimpan dalam peranti — akan dimuat naik bila ada internet', 'info');
+  mnSave(true);
+  recKick();
 }
-async function mnRecUpload(entry, blob){
-  if(blob.size > 35*1024*1024){
-    entry.local = true; mnDirty(); mnRenderRec();
-    alert('Rakaman terlalu besar untuk disimpan ke Drive melalui app (' + Math.round(blob.size/1048576) + 'MB). Tekan "Simpan ke peranti" untuk simpan salinan.');
-    return;
-  }
-  mnSavePopup('busy');
+
+/* the upload worker: one piece at a time, oldest recording first */
+function recHasWork(m){
+  if(m.state === 'pending') return true;
+  if(m.state === 'recording') return !m.legacy && m.bytes - m.uploaded >= REC_CH;
+  return false;
+}
+function recRetryLater(ms){ clearTimeout(REC_UP.timer); REC_UP.timer = setTimeout(recKick, ms); }
+async function recKick(){
+  if(REC_UP.busy) return;
+  REC_UP.busy = true; netRender();
   try{
-    const ext = /mp4/.test(entry.mime) ? 'm4a' : /ogg/.test(entry.mime) ? 'ogg' : 'webm';
-    const up = await apiPost('uploadMinitFigure', { base64: await mnBlobToBase64(blob), filename: 'rakaman_minit_' + entry.key + '.' + ext, mimeType: entry.mime.split(';')[0] });
-    if(!up.success) throw new Error(up.message || 'gagal simpan');
-    entry.id = up.data.id; delete entry.local;
-    const ok = await mnSave(true);
-    mnSavePopup(ok ? 'ok' : 'err', ok ? 'Rakaman ' + mnFmtTime(entry.dur) + ' disimpan di Drive' : 'Rakaman di Drive, minit belum disimpan');
-  }catch(err){
-    entry.local = true; mnDirty();
-    mnSavePopup('err', 'Rakaman belum disimpan ke Drive — tekan "Simpan ke peranti"');
+    while(isOnline() && ensureApi()){
+      const m = Object.values(REC_UP.metas).sort((a,b)=>a.start - b.start).find(recHasWork);
+      if(!m) break;
+      const ok = await recSendPiece(m);
+      mnRecRenderStatus();
+      if(!ok){ recRetryLater(Math.min(60000, 5000 * Math.pow(2, Math.min(m.fails || 0, 3)))); break; }
+    }
+  }catch(err){ console.error(err); recRetryLater(15000); }
+  finally{ REC_UP.busy = false; netRender(); mnRecRenderStatus(); }
+}
+async function recSendPiece(m){
+  const blobs = await recBlobs(m);
+  if(!blobs.length && m.bytes > 0){ m.state = 'failed'; m.err = 'Salinan dalam peranti tidak dijumpai'; rdbPutMeta(m); return true; }
+  const all = new Blob(blobs, { type: m.mime });
+  const ext = /mp4/.test(m.mime) ? 'm4a' : /ogg/.test(m.mime) ? 'ogg' : 'webm';
+  const filename = 'rakaman_minit_' + m.key + '.' + ext;
+  if(m.legacy) return recSendLegacy(m, all, filename);
+  if(m.state === 'pending' && !all.size){ m.state = 'done'; rdbDelMeta(m.key); delete REC_UP.metas[m.key]; return true; }
+  const end = Math.min(m.uploaded + REC_CH, all.size);
+  const final = m.state === 'pending' && end >= all.size;
+  const piece = all.slice(m.uploaded, end);
+  const res = await apiFetchPost('recUpload', { upload_id: m.key, offset: m.uploaded, base64: piece.size ? await mnBlobToBase64(piece) : '',
+    final, total: final ? all.size : '', filename, mimeType: m.mime.split(';')[0] });
+  if(!res.success){
+    if(/Unknown POST action/.test(res.message||'')){ m.legacy = true; rdbPutMeta(m); return m.state === 'pending' ? recSendLegacy(m, all, filename) : true; }
+    m.fails = (m.fails || 0) + 1; m.err = res.message || 'gagal';
+    if(!res.__net && m.fails >= 8){ m.state = 'failed'; }
+    rdbPutMeta(m); return false;
   }
-  mnRenderRec();
+  const d = res.data || {};
+  m.fails = 0; m.err = '';
+  if(d.done){ await recDone(m, d.id); return true; }
+  const before = m.uploaded;
+  m.uploaded = Math.max(0, Math.min(all.size, parseInt(d.received, 10) || 0));
+  if(m.uploaded <= before && !d.resend){ m.stall = (m.stall || 0) + 1; if(m.stall > 3){ m.err = 'Drive tidak menerima'; m.fails = 3; rdbPutMeta(m); return false; } }
+  else m.stall = 0;
+  rdbPutMeta(m);
+  return true;
+}
+// Code.gs not updated yet: the old way (whole file once, after recording)
+async function recSendLegacy(m, all, filename){
+  if(m.state !== 'pending') return true;
+  if(all.size > 35*1024*1024){ m.state = 'failed'; m.err = 'Terlalu besar — kemas kini Code.gs untuk muat naik berperingkat'; rdbPutMeta(m); return true; }
+  const up = await apiFetchPost('uploadMinitFigure', { base64: await mnBlobToBase64(all), filename, mimeType: m.mime.split(';')[0] });
+  if(!up.success){ m.fails = (m.fails || 0) + 1; m.err = up.message || 'gagal'; rdbPutMeta(m); return false; }
+  await recDone(m, up.data.id); return true;
+}
+async function recDone(m, fileId){
+  m.state = 'done'; m.fileId = fileId; m.uploaded = m.total || m.bytes; rdbPutMeta(m);
+  if(await recLink(m)){ rdbDelChunks(m.key); rdbDelMeta(m.key); delete REC_UP.metas[m.key]; }
+  showToast('✓ Rakaman ' + (m.dur ? mnFmtTime(m.dur) + ' ' : '') + 'disimpan di Drive', 'info');
+}
+// put the Drive id into the minit that owns this recording
+async function recLink(m){
+  if(MN && MN.data){
+    let e = mnRecFind(m.key);
+    if(!e && m.minit_id && MN.id === m.minit_id){ e = recEntry(m); recAttach(MN.data, m, e); }
+    if(e){ e.id = m.fileId; delete e.local; mnDirty(); mnRenderRec(); if(MN_SESS >= 0) mnRenderSessKeepScroll(); return await mnSave(true); }
+  }
+  if(!m.minit_id || !isOnline()) return false;
+  const r = await apiFetchGet('getMinit', { minit_id: m.minit_id });
+  if(!r.success || !r.data || !r.data.minit) return false;
+  const data = r.data.minit;
+  let e = (data.recordings||[]).concat(...(data.items||[]).map(it=>it.recs||[])).find(x=>x.key === m.key);
+  if(!e){ e = recEntry(m); recAttach(data, m, e); }
+  e.id = m.fileId; delete e.local;
+  if(MN && MN.id === m.minit_id) return false;    // opened meanwhile — linked above next time
+  const s = await apiFetchPost('saveMinit', { minit_id: m.minit_id, minit: data, created_by: currentUser() });
+  if(s.success) swrInvalidate(['getMinits']);
+  return !!s.success;
+}
+function recEntry(m){ return { key: m.key, mime: m.mime, dur: m.dur || Math.round(((m.lastAt || m.start) - m.start)/1000), at: new Date(m.start).toISOString(), size: m.total || m.bytes, recovered: !!m.recovered }; }
+function recAttach(data, m, e){
+  data.recordings = data.recordings || [];
+  const it = m.mode === 'session' && data.items && data.items[m.item];
+  if(it) (it.recs = it.recs || []).push(e); else data.recordings.push(e);
+}
+// app opened: carry on with recordings left from last time (incl. one cut off by a crash)
+async function recResume(){
+  const metas = await rdbAllMeta();
+  metas.forEach(m=>{
+    if(REC_UP.metas[m.key] || m.key === MN_REC.key) return;
+    if(m.state === 'recording'){ m.state = 'pending'; m.recovered = true; m.dur = Math.round(((m.lastAt || m.start) - m.start)/1000); m.total = m.bytes; rdbPutMeta(m); }
+    REC_UP.metas[m.key] = m;
+  });
+  Object.values(REC_UP.metas).filter(m=>m.state === 'done').forEach(m=>recLink(m).then(ok=>{ if(ok){ rdbDelChunks(m.key); rdbDelMeta(m.key); delete REC_UP.metas[m.key]; netRender(); } }));
+  netRender(); recKick();
+}
+// minit opened: fill in Drive ids that finished while it was closed
+function mnRecResolve(){
+  if(!MN || !MN.data) return;
+  let changed = false;
+  (MN.data.recordings||[]).concat(...MN.data.items.map(it=>it.recs||[])).forEach(e=>{
+    const m = REC_UP.metas[e.key];
+    if(!e.id && m && m.fileId){ e.id = m.fileId; delete e.local; changed = true; }
+  });
+  if(changed){ mnDirty(); mnSave(true).then(ok=>{ if(ok) Object.values(REC_UP.metas).filter(m=>m.state === 'done').forEach(m=>{ if(mnRecFind(m.key)){ rdbDelChunks(m.key); rdbDelMeta(m.key); delete REC_UP.metas[m.key]; } }); }); }
+}
+function recStatusHtml(e){
+  if(e.id) return '✓ di Drive';
+  const m = REC_UP.metas[e.key];
+  if(m){
+    if(m.state === 'failed') return `<b style="color:var(--red)">belum di Drive — ${mnEsc(m.err || 'gagal')}</b>`;
+    const tot = m.total || m.bytes || 1, pct = Math.min(99, Math.round((m.uploaded || 0) / tot * 100));
+    if(!isOnline()) return `📴 dalam peranti — dimuat naik bila ada internet (${pct}%)`;
+    return `⏳ memuat naik ${pct}%${m.err ? ' · <span style="color:var(--orange)">cuba semula…</span>' : ''}`;
+  }
+  return e.local ? '<b style="color:var(--red)">belum di Drive</b>' : '<span style="color:var(--grey)">menunggu dari peranti yang merakam</span>';
+}
+async function recLooseSave(key){
+  const m = REC_UP.metas[key]; const url = await recLocalUrl(key);
+  if(!url){ alert('Salinan rakaman tiada dalam peranti ini.'); return; }
+  const a = document.createElement('a'); a.href = url; a.download = 'rakaman_minit_' + key + (/mp4/.test((m||{}).mime||'') ? '.m4a' : '.webm');
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function recLooseForget(key){
+  const m = REC_UP.metas[key];
+  if(!confirm(m && m.fileId ? 'Buang dari senarai? (Fail di Drive kekal.)' : 'Rakaman ini BELUM di Drive. Buang salinan dalam peranti? Simpan ke peranti dahulu jika perlu.')) return;
+  rdbDelChunks(key); rdbDelMeta(key); delete REC_UP.metas[key]; netRender(); loadMinits();
+}
+function recHasLocal(e){ return !!(MN_REC_URL[e.key] || REC_UP.metas[e.key]); }
+// refresh only the small status labels (a full redraw would stop audio that is playing)
+function mnRecRenderStatus(){
+  if(!MN || !MN.data) return;
+  document.querySelectorAll('.mn-rec-st[data-rk]').forEach(el=>{
+    const e = mnRecFind(el.dataset.rk); if(e) el.innerHTML = recStatusHtml(e);
+  });
 }
 function mnRecFind(key){
   return (MN.data.recordings||[]).concat(...MN.data.items.map(it=>it.recs||[])).find(e=>e.key === key);
 }
-function mnRecDownload(k){
-  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k], url = e && MN_REC_URL[e.key]; if(!url) return;
+async function mnRecDownload(k){
+  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k]; if(!e) return;
+  const url = await recLocalUrl(e.key); if(!url){ alert('Salinan rakaman tiada dalam peranti ini.'); return; }
   const a = document.createElement('a'); a.href = url; a.download = 'rakaman_minit_' + e.key + (/mp4/.test(e.mime) ? '.m4a' : '.webm');
   document.body.appendChild(a); a.click(); a.remove();
 }
 async function mnRecRetry(k){
-  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k], url = e && MN_REC_URL[e.key]; if(!url) return;
-  const blob = await (await fetch(url)).blob(); await mnRecUpload(e, blob);
+  const e = typeof k === 'string' ? mnRecFind(k) : MN.data.recordings[k]; if(!e) return;
+  let m = REC_UP.metas[e.key];
+  if(!m && MN_REC_URL[e.key]){
+    // recorded before this version (memory only): put it into the upload queue
+    const blob = await (await fetch(MN_REC_URL[e.key])).blob();
+    m = REC_UP.metas[e.key] = { key: e.key, mime: e.mime, start: Date.parse(e.at) || Date.now(), mode: 'meeting', item: -1, minit_id: MN.id || '', bytes: blob.size, total: blob.size, seq: 1, uploaded: 0, state: 'pending', dur: e.dur };
+    REC_MEM[e.key] = [blob]; rdbPutChunk(e.key, 0, blob); rdbPutMeta(m);
+  }
+  if(m){ if(m.state === 'failed') m.state = 'pending'; m.fails = 0; m.err = ''; m.stall = 0; recKick(); mnRecRenderStatus(); }
 }
 function mnRenderRec(){
   const box = document.getElementById('mnRecBox'); if(!box) return;
@@ -4967,8 +5400,8 @@ function mnRenderRec(){
        <div class="mn-help" style="margin:6px 0 0;">Atau rakam sesi tertentu sahaja — buka sesi itu dan tekan <strong>🔴 Rakam sesi ini</strong>.</div>`;
   box.innerHTML = live + (recs.length ? `<div class="mn-rec-list">${recs.map((e, k)=>`<div class="mn-rec-item">
       <span>🎧 Rakaman ${k+1} · ${mnFmtTime(e.dur)} · ${new Date(e.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
-      <span class="mn-rec-st">${e.id ? '✓ di Drive' : e.local ? '<b style="color:var(--red)">belum di Drive</b>' : 'menyimpan…'}</span>
-      ${e.local && MN_REC_URL[e.key] ? `<button class="at-link" onclick="mnRecRetry(${k})">Cuba simpan semula</button><button class="at-link" onclick="mnRecDownload(${k})">Simpan ke peranti</button>` : ''}
+      <span class="mn-rec-st" data-rk="${mnEsc(e.key)}">${recStatusHtml(e)}</span>
+      ${!e.id && recHasLocal(e) ? `<button class="at-link" onclick="mnRecRetry(${k})">Cuba muat naik sekarang</button><button class="at-link" onclick="mnRecDownload(${k})">Simpan ke peranti</button>` : ''}
     </div>`).join('')}</div>` : '');
   const pill = document.getElementById('mnRecPillSess');
   if(pill) pill.innerHTML = MN_REC.rec ? `<div class="mn-rec-pill"><span class="mn-mic-dot"></span>REC${MN_REC.mode === 'session' ? ' sesi ' + (MN_REC.item+1) : ''} <span class="mn-rec-time"></span><button onclick="mnRecStop()">⏹ Berhenti</button></div>` : '';
@@ -4984,7 +5417,7 @@ function mnSessRecHtml(i){
   const it = MN.data.items[i], recs = it.recs || [];
   const busyHere = MN_REC.rec && MN_REC.mode === 'session' && MN_REC.item === i;
   const busyOther = MN_REC.rec && !busyHere;
-  const playable = recs.filter(e=>e.id || MN_REC_URL[e.key]);
+  const playable = recs.filter(e=>e.id || recHasLocal(e));
   const cur = playable.find(e=>e.key === MN_SREC_KEY) || playable[playable.length - 1];
   return `<section class="mn-block mn-rec-sess"><div class="mn-block-head"><h2>🎙 Rakaman sesi ini ${recs.length ? `<span class="mn-count">${recs.length}</span>` : ''}</h2></div>
     ${busyHere ? `<div class="mn-rec-live"><span class="mn-mic-dot"></span><strong>Merakam sesi ini</strong> <span class="mn-rec-time">0:00</span><button class="btn small" onclick="mnRecStop()">⏹ Berhenti &amp; simpan</button></div>`
@@ -4993,8 +5426,8 @@ function mnSessRecHtml(i){
     ${recs.length ? `<div class="mn-rec-list">${recs.map((e, k)=>`<div class="mn-rec-item ${cur && e.key === cur.key ? 'sel' : ''}">
         <button class="at-link" style="padding:0;" onclick="MN_SREC_KEY='${e.key}';mnSessPlay()">▶ Rakaman ${k+1}</button>
         <span>${mnFmtTime(e.dur)} · ${new Date(e.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
-        <span class="mn-rec-st">${e.id ? '✓ di Drive' : e.local ? '<b style="color:var(--red)">belum di Drive</b>' : 'menyimpan…'}</span>
-        ${e.local && MN_REC_URL[e.key] ? `<button class="at-link" onclick="mnRecRetry('${e.key}')">Cuba simpan semula</button><button class="at-link" onclick="mnRecDownload('${e.key}')">Simpan ke peranti</button>` : ''}
+        <span class="mn-rec-st" data-rk="${mnEsc(e.key)}">${recStatusHtml(e)}</span>
+        ${!e.id && recHasLocal(e) ? `<button class="at-link" onclick="mnRecRetry('${e.key}')">Cuba muat naik sekarang</button><button class="at-link" onclick="mnRecDownload('${e.key}')">Simpan ke peranti</button>` : ''}
         <button class="at-link memo-del" style="margin-left:auto;" onclick="mnSessRecDelete(${i}, '${e.key}')">Buang</button>
       </div>`).join('')}</div>
       ${playable.length ? `<audio id="sessAudio" controls preload="none" style="width:100%;margin-top:8px;"></audio>
@@ -5003,7 +5436,7 @@ function mnSessRecHtml(i){
   </section>`;
 }
 async function mnSessPlay(){
-  const it = MN.data.items[MN_SESS], recs = (it.recs || []).filter(e=>e.id || MN_REC_URL[e.key]);
+  const it = MN.data.items[MN_SESS], recs = (it.recs || []).filter(e=>e.id || recHasLocal(e));
   const e = recs.find(x=>x.key === MN_SREC_KEY) || recs[recs.length - 1];
   document.querySelectorAll('.mn-rec-sess .mn-rec-item').forEach(el=>el.classList.remove('sel'));
   const au = await mnLoadAudio(e, 'sessAudio', 'sessProg'); if(au) au.play().catch(()=>{});
@@ -5022,12 +5455,26 @@ function mnAuSpeed(id, btnId){
 // fetch a recording (Drive copy if needed) into an <audio> element
 async function mnLoadAudio(e, audioId, progId){
   const au = document.getElementById(audioId); if(!e || !au) return null;
+  if(!MN_REC_URL[e.key]) await recLocalUrl(e.key);          // copy still on this phone → no download
   if(!MN_REC_URL[e.key]){
-    const prog = document.getElementById(progId); if(prog) prog.textContent = 'Memuat turun rakaman dari Drive…';
-    const r = await apiGet('getMinitFigure', { id: e.id });
+    if(!e.id){ alert('Rakaman ini belum dimuat naik ke Drive dari peranti yang merakam.'); return null; }
+    const prog = document.getElementById(progId);
+    const parts = [];
+    let start = 0, total = null;
+    // small pieces, so a slow line shows progress and a failure only repeats one piece
+    while(total === null || start < total){
+      if(prog) prog.textContent = 'Memuat turun rakaman dari Drive…' + (total ? ' ' + Math.round(start / total * 100) + '%' : '');
+      let r = null;
+      for(let t = 0; t < 3 && !(r && r.success); t++) r = await apiFetchGet('getMinitFigure', { id: e.id, start, len: 1048576 });
+      if(!r || !r.success){ if(prog) prog.textContent = ''; alert('Rakaman tidak dapat dimuat turun: ' + ((r && r.message) || '')); return null; }
+      const bytes = mnB64ToBytes(r.data.base64);
+      parts.push(bytes);
+      if(r.data.total === undefined) break;                  // older Code.gs: whole file in one reply
+      total = r.data.total; start += bytes.length;
+      if(!bytes.length) break;
+    }
     if(prog) prog.textContent = '';
-    if(!r.success){ alert('Rakaman tidak dapat dimuat turun: ' + (r.message || '')); return null; }
-    MN_REC_URL[e.key] = URL.createObjectURL(new Blob([mnB64ToBytes(r.data.base64)], { type: e.mime.split(';')[0] }));
+    MN_REC_URL[e.key] = URL.createObjectURL(new Blob(parts, { type: e.mime.split(';')[0] }));
   }
   if(au.dataset.key !== e.key){
     au.src = MN_REC_URL[e.key]; au.dataset.key = e.key;
@@ -5052,7 +5499,7 @@ function mnMeetRecHtml(i){
       <div class="mn-help" style="margin:0 0 8px;">${t != null ? `Sesi ini ditanda pada <strong>${mnFmtTime(t)}</strong> dalam rakaman.` : 'Sesi ini belum ditanda.'}</div>
       <button class="btn secondary small" onclick="mnRecMark(${i}, true);mnRenderSessKeepScroll();showToast('📍 Masa sesi ditanda: ' + mnFmtTime(mnRecElapsed()), 'info')">📍 Tanda mula sesi = sekarang</button></section>`;
   }
-  const usable = recs.map((e, k)=>({ e, k })).filter(x=>x.e.id || MN_REC_URL[x.e.key]);
+  const usable = recs.map((e, k)=>({ e, k })).filter(x=>x.e.id || recHasLocal(x.e));
   if(!usable.length) return '';
   const sel = Math.min(MN_REC_SEL, usable.length - 1), cur = usable[sel].e;
   const start = marks[cur.key];
@@ -5071,7 +5518,7 @@ function mnMeetRecHtml(i){
 }
 let MN_REC_SEL = 0;
 function mnRecCurrent(){
-  const recs = (MN.data.recordings || []).filter(e=>e.id || MN_REC_URL[e.key]);
+  const recs = (MN.data.recordings || []).filter(e=>e.id || recHasLocal(e));
   return recs[Math.min(MN_REC_SEL, recs.length - 1)];
 }
 async function mnRecLoad(){
@@ -5282,18 +5729,41 @@ async function mnDoDraftAi(){
 }
 
 /* ---------- save / preview / generate ---------- */
-async function mnSave(silent){
-  if(!String(MN.data.title||'').trim()){ alert('Isi tajuk minit dahulu.'); return false; }
+// One save at a time. On a slow line the autosave used to start a second
+// save while the first was still going — for a NEW minit that created two
+// copies. Now a save that arrives meanwhile waits and sends the latest data.
+let mnSaveRun = null, mnSaveNext = null;
+function mnSave(silent){
+  if(mnSaveNext) return mnSaveNext;
+  if(!mnSaveRun){ mnSaveRun = mnSaveNow(silent).finally(()=>{ mnSaveRun = null; }); return mnSaveRun; }
+  mnSaveNext = mnSaveRun.then(()=>{ mnSaveNext = null; mnSaveRun = mnSaveNow(silent).finally(()=>{ mnSaveRun = null; }); return mnSaveRun; });
+  return mnSaveNext;
+}
+// back online: send the minit that could not be saved
+function mnOnlineSave(){ if(MN && MN.data && document.getElementById('mnSaveState') && mnUnsaved()) mnSave(true).then(ok=>{ if(ok) showToast('✓ Minit disimpan (internet kembali)', 'info'); }); }
+async function mnSaveNow(silent){
+  if(!MN || !MN.data) return false;
+  if(!String(MN.data.title||'').trim()){ if(!silent) alert('Isi tajuk minit dahulu.'); return false; }
   clearTimeout(mnAutoTimer);
+  if(!isOnline()){
+    try{ localStorage.setItem(MN_BACKUP_KEY, JSON.stringify({ id: MN.id, data: mnPlain(MN.data), ts: Date.now() })); }catch(e){}
+    mnSetSaveState('Belum disimpan — 📴 offline, salinan dalam peranti');
+    if(!silent) showToast('📴 Tiada internet — minit disimpan dalam peranti, akan dihantar bila online', 'info');
+    return false;
+  }
   mnSetSaveState('Menyimpan…');
-  const res = await apiPost('saveMinit', { minit_id: MN.id, minit: mnPlain(MN.data), created_by: currentUser() });
+  const cur = MN, ver = MN_VER;
+  const res = await apiPost('saveMinit', { minit_id: cur.id, minit: mnPlain(cur.data), created_by: currentUser() });
   if(!res.success){
-    mnSetSaveState('Belum disimpan — gagal');
+    if(MN !== cur) return false;
+    mnSetSaveState(res.__net ? 'Belum disimpan — internet terputus, salinan dalam peranti' : 'Belum disimpan — gagal');
     showToast('✗ Gagal simpan: ' + (res.message||'cuba lagi'), 'err');
     if(!silent) alert('Gagal simpan minit: ' + (res.message||'ralat tidak diketahui') + '\n\nSalinan sementara masih ada dalam peranti ini.');
     return false;
   }
-  MN.id = res.data.minit_id;
+  cur.id = res.data.minit_id;
+  if(MN !== cur) return true;
+  if(MN_VER !== ver){ mnSetSaveState('Belum disimpan — perubahan baharu'); return true; }   // edited while saving: autosave sends the rest
   mnSetSaveState('✓ Disimpan ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
   mnClearBackup();
   return true;
