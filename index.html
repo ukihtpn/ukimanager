@@ -1296,7 +1296,7 @@ function swrClear(){ SWR = {}; try{ localStorage.removeItem(SWR_KEY); }catch(e){
 /* ---- network: time limits so a slow line never hangs the app ---- */
 function isOnline(){ return navigator.onLine !== false; }
 const NET_TIMEOUT = { bootstrap: 60000, getMinitFigure: 120000, getMinit: 60000, batch: 60000, recUpload: 120000,
-  uploadMinitFigure: 300000, uploadMemoAttachment: 300000, uploadMinitDocx: 300000, ocrImage: 120000, aiDraftMinit: 120000, saveMinit: 90000, translateLines: 90000 };
+  uploadMinitFigure: 300000, uploadMemoAttachment: 300000, uploadMinitDocx: 300000, ocrImage: 120000, aiDraftMinit: 120000, aiRewriteMinit: 120000, saveMinit: 90000, translateLines: 90000 };
 async function fetchJson(url, opts, ms){
   const ctl = window.AbortController ? new AbortController() : null;
   const t = ctl ? setTimeout(()=>ctl.abort(), ms) : null;
@@ -3583,8 +3583,35 @@ function minitSlideLines(text){
 }
 // footer / header noise repeated on every slide
 const MINIT_NOISE_RE = /^(hospital tengku permaisuri norashikin|htpn|unit (pencegahan )?(dan |& )?kawalan infeksi|uki|kementerian kesihatan malaysia|kkm|slide \d+|slaid \d+|\d{1,3}|page \d+|www\.|https?:)/i;
+// slide decoration glued onto a line: step progress "1 2 3 … 10", page number, "STEP 9 ·"
+const MINIT_PAGE_KEEP = /^(katil|bed|wad|ward|slaid|slide|hari|day|minggu|week|ew|bilangan|jumlah|total|kes|case|cases|seramai|sebanyak|bil|no|tahun|year|umur|age|dos|dose|bilik|room|cubicle|kubikel|tingkat|level|aras|fasa|phase|step|langkah)$/i;
+function minitStripDecor(l){
+  l = String(l||'').replace(/^(step|langkah)\s*\d+\s*[·:\-–]?\s*/i, '');
+  l = l.replace(/\s*\b1 2 3 4 5( 6)?( 7)?( 8)?( 9)?( 10)?\b(\s+\d{1,3})?\s*\.?\s*$/, '');      // step progress (+ page no.)
+  l = l.replace(/(\s+(?!20\d\d\b)[\d.,%]+){3,}\s*$/, '');
+  l = l.replace(/,\s*\d{1,2}\.?$/, '');                                   // chart values glued to a title
+  const m = l.match(/^(.*\s)([a-z][a-z\-]{2,})\s+(\d{1,2})\.?$/);                            // "… yang tinggi 15." page number
+  if(m && +m[3] <= 60 && !MINIT_PAGE_KEEP.test(m[2])) l = (m[1] + m[2]).trim();
+  return l.trim();
+}
+// axis labels, legends and rows of numbers from a chart
+const MINIT_MONTH_RE = /^(jan(uari|uary)?|feb(ruari|ruary)?|mac|mar(ch)?|apr(il)?|mei|may|jun[e]?|jul(ai|y)?|ogo(s)?|aug(ust)?|sep(t(ember)?)?|okt(ober)?|oct(ober)?|nov(ember)?|dis(ember)?|dec(ember)?|q[1-4]|20\d\d)$/i;
+function minitIsChartJunk(l){
+  const toks = String(l||'').replace(/[.,;:]+$/,'').split(/\s+/).filter(Boolean);
+  const nums = toks.filter(t=>/^[\d.,%()+\-–]+$/.test(t)).length;
+  if(nums >= 4 && nums / toks.length >= 0.5) return true;
+  if(toks.length >= 3 && toks.every(t=>MINIT_MONTH_RE.test(t.replace(/[,.]/g,'')) || /^[–\-]$/.test(t))) return true;
+  if(/^(pematuhan|compliance|bulan|month|months|peratus(an)?|percentage|kadar|rate|bilangan|number|no\.?|frequency|kekerapan|tahun|year)\s*(\((%|\d{4}|n|\w{1,6})\))?\.?$/i.test(l.trim())) return true;
+  return false;
+}
+// running header / footer: "OMT RSV OUTBREAK, SCN | UNIT … | SULIT"
+function minitIsHeaderFooter(l){
+  return (String(l).match(/\|/g) || []).length >= 2 || /\|\s*(sulit|confidential|rahsia)\b/i.test(l) || /^(sulit|confidential|rahsia)\.?$/i.test(String(l).trim());
+}
 function minitCleanLines(text){
-  return minitSlideLines(text).filter(l=>{
+  return minitSlideLines(text).map(minitStripDecor).filter(l=>{
+    if(!l) return false;
+    if(minitIsHeaderFooter(l) || minitIsChartJunk(l)) return false;
     if(minitLooksLikePatientRow(l)) return false;
     if(MINIT_NOISE_RE.test(l) && l.length < 60) return false;
     const words = l.split(' ').filter(w=>/[a-zA-Z]{2,}/.test(w));
@@ -3609,16 +3636,16 @@ function minitSlideTitle(lines){
 }
 // opening sentence chosen from what the slide is about (IPC wording used at UKI)
 const MINIT_TOPICS = [
+  [/^(recommend|cadangan|saranan)|recommend|cadangan|saranan|tindakan susulan/i, 'Cadangan dan tindakan susulan yang dikemukakan adalah seperti berikut:'],
   [/defin/i, 'Definisi kes yang digunakan dalam penyiasatan adalah seperti berikut:'],
   [/mapping|pemetaan|timeline|garis masa|epi(demic)? ?curve|lengkung/i, 'Pemetaan kes dan garis masa kejadian telah dibentangkan seperti berikut:'],
   [/hand hygiene|kebersihan tangan|cucian tangan|\bhh\b|abhr|5 moment/i, 'Pencapaian audit kebersihan tangan (hand hygiene) adalah seperti berikut:'],
   [/contact|kontak|saringan|screening|swab|makmal|lab|keputusan ujian|pcr/i, 'Keputusan saringan, pengesanan kontak dan ujian makmal adalah seperti berikut:'],
   [/clean|pembersihan|pencucian|persekitaran|environment|glo.?germ|terminal|disinfect/i, 'Pemantauan pembersihan persekitaran dan peralatan mendapati:'],
-  [/audit|compliance|pematuhan|bundle|pemantauan|monitoring|rondaan/i, 'Pemantauan dan audit oleh Unit Kawalan Infeksi mendapati:'],
+  [/\baudit|compliance|pematuhan|bundle|pemantauan|monitoring|rondaan/i, 'Pemantauan dan audit oleh Unit Kawalan Infeksi mendapati:'],
   [/background|latar belakang|kes indeks|index case|notifikasi|notified/i, 'Mesyuarat dimaklumkan mengenai latar belakang kejadian seperti berikut:'],
   [/hipotesis|hypothes|punca|root cause|analisis|analysis|investigation|siasatan/i, 'Hasil penyiasatan dan analisis punca adalah seperti berikut:'],
-  [/control|kawalan|intervensi|intervention|langkah|measure|isolasi|cohort/i, 'Langkah kawalan yang telah diambil adalah seperti berikut:'],
-  [/recommend|cadangan|saranan|plan|pelan|tindakan susulan/i, 'Cadangan dan tindakan susulan yang dikemukakan adalah seperti berikut:'],
+  [/control measure|langkah kawalan|kawalan segera|intervensi|intervention|isolasi|cohort|pengasingan/i, 'Langkah kawalan yang telah diambil adalah seperti berikut:'],
   [/training|latihan|epsa|kursus|bengkel/i, 'Status latihan kakitangan adalah seperti berikut:']
 ];
 // the slide's own title decides first, then its content, then the agenda title
@@ -3696,14 +3723,44 @@ function minitLabelText(t){
 /* style 'ringkas': "<pembentang> membentangkan slaid … yang merangkumi: • tajuk slaid"
    style 'dapatan': sentences built from each slide (labels become "X ialah …")
    opts.tr: { original line → Malay translation } */
+const MINIT_FIXED = { 'finding':'Penemuan', 'findings':'Penemuan', 'key finding':'Penemuan utama', 'key findings':'Penemuan utama', 'good practice':'Amalan baik',
+  'good practices':'Amalan baik', 'recommendation':'Cadangan', 'recommendations':'Cadangan', 'action':'Tindakan', 'actions':'Tindakan', 'action taken':'Tindakan yang diambil',
+  'observation':'Pemerhatian', 'observations':'Pemerhatian', 'issue':'Isu', 'issues':'Isu', 'challenge':'Cabaran', 'challenges':'Cabaran', 'remarks':'Catatan', 'note':'Nota' };
+// how a group of lines under these labels is introduced
+const MINIT_LABEL_HEAD = { 'penemuan':'Antara penemuan audit adalah seperti berikut:', 'penemuan utama':'Antara penemuan utama adalah seperti berikut:',
+  'amalan baik':'Amalan baik yang diperhatikan:', 'cadangan':'Cadangan yang dikemukakan adalah seperti berikut:', 'tindakan':'Tindakan yang telah diambil:',
+  'tindakan yang diambil':'Tindakan yang telah diambil:', 'pemerhatian':'Pemerhatian adalah seperti berikut:', 'isu':'Isu yang dikenal pasti:', 'cabaran':'Cabaran yang dihadapi:' };
+function minitFixTr(t){ return String(t||'').replace(/\bPencemuan\b/g,'Penemuan').replace(/\bpencemuan\b/g,'penemuan'); }
+// the section a slide belongs to: the line after "STEP 9" / "LANGKAH 6"
+function minitSlideSection(text){
+  const raw = minitSlideLines(text);
+  for(let i = 0; i < raw.length; i++){
+    const m = raw[i].match(/^(step|langkah)\s*\d+\s*[·:\-–]?\s*(.*)$/i);
+    if(!m) continue;
+    const rest = minitStripDecor(m[2] || raw[i+1] || '');
+    if(rest && !minitIsHeaderFooter(rest)) return rest;
+  }
+  return '';
+}
 function minitSentencesFromSlides(item, pages, opts){
   opts = opts || {};
   const style = opts.style || 'dapatan';
   const tr = opts.tr || {};
-  const T = l=>{ const k = String(l||'').trim(); return tr[k] || tr[k.replace(/[:\s]+$/,'')] || k; };
+  const T = l=>{ const k = String(l||'').trim(), b = k.replace(/[:\s]+$/,''); return MINIT_FIXED[b.toLowerCase()] || minitFixTr(tr[k] || tr[b] || k); };
   const title = String(item.title||'').replace(/^\d+(\.\d+)*\.?\s*/,'').trim();
   const lowTitle = title.toLowerCase();
-  const slides = pages.map(p=>{ const lines = minitCleanLines(p.text); return { num: p.num, lines, title: minitSlideTitle(lines) }; }).filter(s=>s.lines.length);
+  let slides = pages.map(p=>({ num: p.num, section: minitSlideSection(p.text), lines: minitCleanLines(p.text) }));
+  // a line printed on most of the chosen slides is a running header/footer, not content
+  if(slides.length >= 3){
+    const cnt = {};
+    slides.forEach(s=>new Set(s.lines.map(l=>l.toLowerCase())).forEach(k=>{ cnt[k] = (cnt[k] || 0) + 1; }));
+    const secs = new Set(slides.map(s=>s.section.toLowerCase()));
+    slides.forEach(s=>{ s.lines = s.lines.filter(l=>{ const k = l.toLowerCase(); return secs.has(k) || cnt[k] < Math.max(3, slides.length * 0.6); }); });
+  }
+  slides = slides.map(s=>{
+    const lines = s.lines.filter(l=>!s.section || l.toLowerCase() !== s.section.toLowerCase());
+    return { num: s.num, section: s.section, lines, title: minitSlideTitle(lines.filter(l=>!MINIT_FIXED[l.replace(/[:\s]+$/,'').toLowerCase()])) };
+  }).filter(s=>s.lines.length);
   const ref = '*(rujuk slaid pembentangan yang dilampirkan)*';
   if(!slides.length) return '';
   const out = [];
@@ -3726,7 +3783,16 @@ function minitSentencesFromSlides(item, pages, opts){
   let first = !many;
   const fresh = l=>{ const k = l.toLowerCase(); if(seenLine.has(k)) return false; seenLine.add(k); return true; };
   const crops = opts.crops || {};
+  let lastSec = '', lastHead = '';
+  const seenSec = new Set();
   slides.forEach(s=>{
+    // "STEP 9 · Review & follow-up" → one numbered sub-heading per section
+    if(many && s.section && !seenSec.has(s.section.toLowerCase())){
+      lastSec = s.section.toLowerCase(); seenSec.add(lastSec);
+      const sec = minitLabelText(T(s.section)).replace(/\s*·\s*/g, ' – ');
+      out.push(''); out.push('## ' + sec);
+    }
+    const start = out.length;
     const titleIsLabel = s.title && minitIsLabel(s.title);
     // ward maps, timelines and flow charts: many short labels, no sentences → describe, don't copy
     if(!(crops[s.num]||[]).length && minitIsDiagram(s.lines)){
@@ -3745,7 +3811,8 @@ function minitSentencesFromSlides(item, pages, opts){
       if(first){ sen = 'Mesyuarat dimaklumkan mengenai ' + what + ' seperti rajah di bawah.'; first = false; }
       out.push(''); out.push(sen);
       crops[s.num].forEach(c=>out.push('[[rajah:' + c.id + ']]'));
-      const nums = minitKeyLines(s.lines.filter(l=>l !== s.title && /\d/.test(l)), 3).filter(fresh);
+      const words = l=>l.split(/\s+/).filter(w=>/[a-zA-Z]{3,}/.test(w)).length;
+      const nums = minitKeyLines(s.lines.filter(l=>l !== s.title && !minitIsLabel(l) && words(l) >= 4), 3).filter(fresh);
       if(nums.length){ out.push('Antara dapatan utama:'); nums.forEach(l=>out.push('- ' + minitSentence(T(l)))); }
       return;
     }
@@ -3753,7 +3820,16 @@ function minitSentencesFromSlides(item, pages, opts){
     const blocks = minitBlocks(body);
     const labelled = blocks.filter(b=>b.label && b.lines.length);
     const tk = (s.title||'').toLowerCase();
-    if(many && s.title && !titleIsLabel && !seenTitle.has(tk)){ seenTitle.add(tk); out.push(''); out.push('## ' + minitLabelText(T(s.title))); }
+    if(many && s.title && !titleIsLabel && !seenTitle.has(tk)){
+      seenTitle.add(tk); out.push('');
+      out.push(s.section ? '**' + minitSentence(T(s.title)).replace(/[.:]$/,'') + '**' : '## ' + minitLabelText(T(s.title)));
+      lastHead = '';
+    }
+    const titleAt = out.length;
+    // several "FINDING" boxes on one slide → one list under one label
+    for(let j = blocks.length - 1; j > 0; j--){
+      if(blocks[j].label && blocks[j-1].label && T(blocks[j].label).toLowerCase() === T(blocks[j-1].label).toLowerCase()){ blocks[j-1].lines = blocks[j-1].lines.concat(blocks[j].lines); blocks.splice(j, 1); }
+    }
     if(labelled.length){
       // e.g. CASE DEFINITION (CASE): Patients admitted … → "Definisi kes ialah pesakit yang dimasukkan …"
       blocks.forEach(b=>{
@@ -3762,6 +3838,9 @@ function minitSentencesFromSlides(item, pages, opts){
         if(!b.label){ lines.forEach(l=>out.push('- ' + minitSentence(l))); return; }
         const lab = minitLabelText(T(b.label));
         const isDef = /^(definisi|takrif)/i.test(lab);
+        const fixedHead = MINIT_LABEL_HEAD[lab.toLowerCase()];
+        if(fixedHead){ first = false; if(fixedHead !== lastHead) out.push(fixedHead); lastHead = fixedHead; lines.forEach(l=>out.push('- ' + minitSentence(l))); return; }
+        lastHead = '';
         if(lines.length === 1){
           let sen = isDef ? lab + ' ialah ' + minitLcFirst(lines[0]) : lab + ': ' + minitLcFirst(lines[0]);
           if(first){ sen = 'Mesyuarat dimaklumkan bahawa ' + minitLcFirst(sen); first = false; }
@@ -3776,9 +3855,11 @@ function minitSentencesFromSlides(item, pages, opts){
           lines.forEach(l=>out.push('- ' + minitSentence(l)));
         }
       });
+      if(out.length === titleAt && titleAt > start){ out.length = start; seenTitle.delete(tk); }
     } else {
       const key = minitKeyLines(body, 6).filter(fresh);
-      if(!key.length) return;
+      lastHead = '';
+      if(!key.length){ if(out.length === titleAt && titleAt > start){ out.length = start; seenTitle.delete(tk); } return; }
       out.push(minitTopicIntro(T(s.title), key.map(T).join(' '), title, s.title, key.join(' ')));
       key.forEach(l=>out.push('- ' + minitSentence(T(l))));
       first = false;
@@ -4815,6 +4896,11 @@ function mnRenderSess(){
         <button type="button" class="mn-phrase" onmousedown="event.preventDefault()" onclick="mnInsertText('\\nTindakan: ')">Tindakan di sini</button>
       </div>
       <textarea class="mn-content" id="ms_content" oninput="mnSetItem('content', this.value)" placeholder="Mesyuarat dimaklumkan bahawa…">${mnEsc(it.content||'')}</textarea>
+      <div class="mn-row" style="margin:6px 0 4px;">
+        <button type="button" class="btn secondary small" onmousedown="event.preventDefault()" onclick="mnAiFix()">✨ Baiki ayat (AI)</button>
+        <button type="button" class="btn secondary small ${MN_FIX_UNDO && MN_FIX_UNDO.sess === i ? '' : 'hidden'}" id="mnFixUndo" onclick="mnAiFixUndo()">↶ Kembalikan teks asal</button>
+        <span class="mn-help" style="margin:0;">Tanda (highlight) sebahagian teks untuk baiki bahagian itu sahaja.</span>
+      </div>
       <details class="mn-tips"><summary>Cara format</summary>
         <div style="margin-top:6px;line-height:1.7;"><strong>## Subtajuk</strong> (jadi ${i+1}.1, ${i+1}.2 … dalam minit) · <strong>- poin</strong> · <strong>&nbsp;&nbsp;- sub-poin</strong> (2 ruang depan) · <strong>**tebal**</strong> · <strong>*italik*</strong> · baris <strong>Tindakan: Unit X</strong> untuk tindakan di tengah nota.</div>
       </details>
@@ -5726,6 +5812,90 @@ async function mnDoDraftAi(){
   if(!res.success){ alert(res.message || 'Draf AI gagal.'); return; }
   mnAppendContent(res.data.text || '');
   showToast('✓ Draf AI dimasukkan ke nota');
+}
+
+/* ---------- ✨ Baiki ayat (AI): rewrite the notes without adding facts ---------- */
+const MN_FIX_MODES = [
+  ['baiki', 'Betulkan ayat', 'Tatabahasa & gaya minit, isi dikekalkan'],
+  ['isu', 'Pecahkan mengikut isu', 'Penemuan dahulu, "Walau bagaimanapun…" jika ada tindakan'],
+  ['ringkas', 'Ringkaskan', 'Lebih pendek, angka & keputusan dikekalkan'],
+  ['perenggan', 'Jadikan perenggan', 'Ayat bersambung tanpa poin'],
+  ['poin', 'Jadikan poin', 'Satu perkara satu poin']
+];
+let MN_FIX = null;   // { start, end, whole, src }
+let MN_FIX_UNDO = null; // { sess, content } before the last AI replace
+function mnAiFixUndo(){
+  if(!MN_FIX_UNDO || MN_FIX_UNDO.sess !== MN_SESS) return;
+  const it = MN.data.items[MN_SESS]; it.content = MN_FIX_UNDO.content; MN_FIX_UNDO = null;
+  const ta = document.getElementById('ms_content'); if(ta) ta.value = it.content;
+  const u = document.getElementById('mnFixUndo'); if(u) u.classList.add('hidden');
+  mnDirty(); showToast('↶ Teks asal dikembalikan', 'info');
+}
+function mnAiFix(){
+  if(!MN_AI){
+    openModal(`<h3>✨ Baiki ayat (AI)</h3>
+      <div class="mn-help" style="margin:0 0 10px;">AI belum diaktifkan. Untuk aktifkan:</div>
+      <ol style="font-size:13.5px;line-height:1.7;margin:0 0 10px 18px;padding:0;">
+        <li>Dapatkan API key percuma di <b>aistudio.google.com</b> → <i>Get API key</i>.</li>
+        <li>Apps Script → ⚙️ <b>Project Settings</b> → <b>Script Properties</b> → <i>Add script property</i>: nama <code>GEMINI_API_KEY</code>, nilai = key tersebut.</li>
+        <li>Save, kemudian muat semula app ini.</li></ol>
+      <div class="modal-actions"><button class="btn" onclick="closeModal()">Faham</button></div>`);
+    return;
+  }
+  const ta = document.getElementById('ms_content'); if(!ta) return;
+  const a = ta.selectionStart, b = ta.selectionEnd;
+  const part = a !== b && ta.value.slice(a, b).trim().length >= 15;
+  const src = part ? ta.value.slice(a, b) : ta.value;
+  if(!src.trim()){ alert('Tulis atau jana ayat dalam nota dahulu.'); return; }
+  MN_FIX = { start: part ? a : 0, end: part ? b : ta.value.length, whole: !part, src };
+  openModal(`<h3>✨ Baiki ayat (AI)</h3>
+    <div class="mn-help" style="margin:0 0 8px;">${part ? 'Bahagian yang ditanda (' + src.trim().split(/\s+/).length + ' patah perkataan) akan dibaiki.' : 'Semua teks nota sesi ini akan dibaiki.'} AI tidak akan menambah fakta baharu.</div>
+    <div id="fixModes" style="display:grid;gap:6px;margin-bottom:8px;">${MN_FIX_MODES.map(([k, t, d], i)=>`
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;cursor:pointer;"><input type="radio" name="fixMode" value="${k}" ${i === 0 ? 'checked' : ''} style="margin-top:3px;"><span><b>${t}</b> <span style="color:var(--grey);font-size:12.5px;">— ${d}</span></span></label>`).join('')}</div>
+    <div class="field" style="margin:0 0 8px;"><label for="fixOwn">Arahan sendiri (pilihan)</label>
+      <input id="fixOwn" placeholder="cth. guna 'Ketua Jururawat' bukan 'Sister'; mulakan dengan isu PPE"></div>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;"><input type="checkbox" id="fixOk" style="margin-top:3px;"> Saya sahkan teks ini tiada nama atau maklumat pengenalan pesakit.</label>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Batal</button><button class="btn" id="fixGo" onclick="mnAiFixRun()">✨ Baiki</button></div>`);
+}
+async function mnAiFixRun(){
+  if(!document.getElementById('fixOk').checked){ alert('Sila tanda pengesahan dahulu.'); return; }
+  if(!isOnline()){ alert('AI perlukan internet.'); return; }
+  const mode = (document.querySelector('input[name=fixMode]:checked') || {}).value || 'baiki';
+  const own = document.getElementById('fixOwn').value.trim();
+  const btn = document.getElementById('fixGo'); btn.disabled = true; btn.textContent = 'AI sedang menulis…';
+  const res = await apiPost('aiRewriteMinit', { text: MN_FIX.src, mode, instruction: own });
+  if(!res.success){
+    btn.disabled = false; btn.textContent = '✨ Baiki';
+    alert(/Unknown POST action/.test(res.message||'') ? 'Code.gs belum dikemas kini — paste Code.gs baharu dan Deploy (New version).' : (res.message || 'AI gagal.'));
+    return;
+  }
+  MN_FIX.mode = mode; MN_FIX.own = own;
+  mnAiFixShow(String(res.data.text || '').replace(/^```\w*\n?|```$/g,'').trim());
+}
+function mnAiFixShow(text){
+  openModal(`<h3>✨ Hasil AI</h3>
+    <div class="mn-help" style="margin:0 0 6px;">Semak dan edit jika perlu. Pastikan tiada fakta yang berubah.</div>
+    <textarea id="fixOut" class="mn-content" style="min-height:280px;">${mnEsc(text)}</textarea>
+    <details class="mn-tips" style="margin-top:6px;"><summary>Lihat teks asal</summary><div style="white-space:pre-wrap;font-size:13px;margin-top:6px;color:var(--grey);">${mnEsc(MN_FIX.src)}</div></details>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      <button class="btn secondary" onclick="closeModal()">Batal</button>
+      <button class="btn secondary" onclick="mnAiFix()">↻ Cuba lagi</button>
+      <button class="btn secondary" onclick="mnAiFixUse(false)">Tambah di bawah</button>
+      <button class="btn" onclick="mnAiFixUse(true)">${MN_FIX.whole ? 'Ganti semua' : 'Ganti bahagian ditanda'}</button></div>`);
+}
+function mnAiFixUse(replace){
+  const out = document.getElementById('fixOut').value.trim();
+  closeModal();
+  const it = MN.data.items[MN_SESS]; if(!it || !out) return;
+  const cur = it.content || '';
+  MN_FIX_UNDO = { sess: MN_SESS, content: cur };
+  // the notes may have changed while the AI was writing: only replace if the original is still there
+  if(replace && cur.slice(MN_FIX.start, MN_FIX.end) === MN_FIX.src) it.content = cur.slice(0, MN_FIX.start) + out + cur.slice(MN_FIX.end);
+  else it.content = cur.replace(/\s+$/,'') + (cur.trim() ? '\n\n' : '') + out;
+  const ta = document.getElementById('ms_content'); if(ta) ta.value = it.content;
+  const u = document.getElementById('mnFixUndo'); if(u) u.classList.remove('hidden');
+  mnDirty();
+  showToast(replace ? '✓ Teks diganti — tekan "↶ Kembalikan teks asal" jika mahu batal' : '✓ Teks AI ditambah di bawah', 'info');
 }
 
 /* ---------- save / preview / generate ---------- */
